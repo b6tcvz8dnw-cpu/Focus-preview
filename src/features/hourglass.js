@@ -6,7 +6,7 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
   const button = $('hourglassStart');
   if (!button) throw new Error('hourglassStart button was not found');
   let duration = 300, remaining = 300, deadline = 0, interval = null;
-  let running = false, pressTimer = null, longPressed = false, pageVisible = true;
+  let running = false, pressTimer = null, longPressed = false, pageVisible = true, destroyed = false;
   function render() {
     const seconds = Math.max(0, remaining);
     $('hourglassTime').textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
@@ -19,10 +19,10 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
     $('hourglassTime').setAttribute('aria-label', '残り ' + Math.floor(seconds / 60) + ' 分 ' + (seconds % 60) + ' 秒');
   }
   function scheduleTick() {
-    if (pageVisible && running && interval === null) interval = window.setInterval(tick, 1000);
+    if (!destroyed && pageVisible && running && interval === null) interval = window.setInterval(tick, 1000);
   }
   function stop() {
-    if (interval !== null) { clearInterval(interval); interval = null; }
+    if (interval !== null) { window.clearInterval(interval); interval = null; }
     running = false;
   }
   function tick() {
@@ -32,51 +32,76 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
     render();
   }
   function start() {
+    if (destroyed) return;
     if (remaining <= 0) remaining = duration;
     deadline = Date.now() + remaining * 1000;
     running = true;
-    if (interval !== null) clearInterval(interval);
+    if (interval !== null) window.clearInterval(interval);
     interval = null;
     scheduleTick();
     render();
   }
   function setVisible(visible) {
+    if (destroyed) return;
     pageVisible = !!visible;
     if (!pageVisible) {
       tick();
-      if (interval !== null) { clearInterval(interval); interval = null; }
+      if (interval !== null) { window.clearInterval(interval); interval = null; }
       return;
     }
     tick();
     scheduleTick();
   }
   function reset() {
+    if (destroyed) return;
     stop(); duration = 300; remaining = duration; deadline = 0; render();
   }
-  button.addEventListener('click', () => {
+  function handleClick() {
     if (longPressed) { longPressed = false; return; }
     if (running) { tick(); if (remaining > 0) { stop(); render(); } }
     else start();
-  });
-  button.addEventListener('keydown', event => {
+  }
+  function handleKeydown(event) {
     if (event.key.toLowerCase() !== 'r' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
     event.preventDefault();
     reset();
     $('hourglassState').textContent = '5分に戻しました';
-  });
-  button.addEventListener('pointerdown', event => {
+  }
+  function handlePointerDown(event) {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     longPressed = false;
-    clearTimeout(pressTimer);
+    if (pressTimer !== null) window.clearTimeout(pressTimer);
     pressTimer = window.setTimeout(() => {
+      pressTimer = null;
       longPressed = true; reset();
       $('hourglassState').textContent = '5分に戻しました';
     }, 700);
-  });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(type => {
-    button.addEventListener(type, () => { clearTimeout(pressTimer); pressTimer = null; });
-  });
-  button.addEventListener('contextmenu', event => event.preventDefault());
+  }
+  function clearPressTimer() {
+    if (pressTimer !== null) window.clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+  function handleContextMenu(event) { event.preventDefault(); }
+  const pointerEndEvents = ['pointerup', 'pointerleave', 'pointercancel'];
+  button.addEventListener('click', handleClick);
+  button.addEventListener('keydown', handleKeydown);
+  button.addEventListener('pointerdown', handlePointerDown);
+  pointerEndEvents.forEach(type => button.addEventListener(type, clearPressTimer));
+  button.addEventListener('contextmenu', handleContextMenu);
   render();
-  return { tick, reset, setVisible, getState: () => ({ duration, remaining, running, deadline }) };
+  return {
+    tick, reset, setVisible,
+    getState: () => ({ duration, remaining, running, deadline }),
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      stop();
+      clearPressTimer();
+      button.removeEventListener('click', handleClick);
+      button.removeEventListener('keydown', handleKeydown);
+      button.removeEventListener('pointerdown', handlePointerDown);
+      pointerEndEvents.forEach(type => button.removeEventListener(type, clearPressTimer));
+      button.removeEventListener('contextmenu', handleContextMenu);
+    }
+  };
 }
