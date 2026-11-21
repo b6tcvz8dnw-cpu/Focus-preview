@@ -120,7 +120,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v3"));
+  assert.ok(sw.includes("focus-preview-pwa-v4"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -194,7 +194,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v3");
+  assert.equal(cacheName, "focus-preview-pwa-v4");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -252,7 +252,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v3';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v4';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -1224,13 +1224,13 @@ test("ambient sound presets replace layers and volume changes reach every active
   const h = createFakeAudioHarness();
   h.controller.setPreset('rainy');
   assert.deepEqual(h.controller.getActiveLayers(), ['rain','noise']);
-  assert.equal(h.presetButtons.find(button => button.dataset.soundPreset === 'rainy').selected, true);
+  assert.equal(h.presetButtons.find(button => button.dataset.soundPreset === 'rainy').classList.selected, true);
   h.controller.setVolume(0.4);
   assert.deepEqual(h.gains.map(gain => gain.gain.target), [[0.2,10,0.08],[0.2,10,0.08]]);
   h.controller.setPreset('off');
   assert.deepEqual(h.controller.getActiveLayers(), []);
   assert.ok(h.sources.every(source => source.stoppedAt === 10.5));
-  assert.equal(h.presetButtons.every(button => !button.selected), true);
+  assert.equal(h.presetButtons.every(button => !button.classList.selected), true);
 });
 
 test("ambient sound controller reports unsupported audio and stops all layers on destroy", () => {
