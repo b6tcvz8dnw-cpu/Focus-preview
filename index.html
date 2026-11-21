@@ -237,10 +237,10 @@ textarea.field-select{font-family:inherit;resize:vertical;min-height:80px}
 .hourglass-art{width:76px;height:118px;overflow:visible;filter:drop-shadow(0 7px 10px rgba(0,0,0,.18))}
 .hourglass-frame{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;opacity:.88}
 .hourglass-glass{fill:rgba(210,226,218,.07);stroke:rgba(224,233,226,.7);stroke-width:2}
-.hourglass-sand-top{fill:var(--accent);transform-origin:50px 12px;transition:transform .5s linear}
-.hourglass-sand-bottom{fill:var(--accent);transform-origin:50px 108px;transition:transform .5s linear}
-.hourglass-stream{stroke:var(--accent);stroke-width:2.2;stroke-linecap:round;opacity:0}
-.hourglass-art.is-running .hourglass-stream{opacity:.8;animation:sand-stream .7s ease-in-out infinite alternate}
+.hourglass-sand-top{fill:var(--accent);transform-box:view-box;transform-origin:50px 12px;transition:transform .9s linear}
+.hourglass-sand-bottom{fill:var(--accent);transform-box:view-box;transform-origin:50px 108px;transition:transform .9s linear}
+.hourglass-stream{stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:3 5;stroke-dashoffset:0;opacity:0;transition:opacity .2s ease}
+.hourglass-art.is-running .hourglass-stream{opacity:1;animation:sand-flow .42s linear infinite}\n.hourglass-grain{fill:var(--accent);opacity:0;transform-box:view-box}\n.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall .9s linear infinite}\n.hourglass-art.is-running .hourglass-grain.grain-b{animation-delay:.3s}\n.hourglass-art.is-running .hourglass-grain.grain-c{animation-delay:.6s}
 .hourglass-readout{text-align:left;min-width:112px}
 .hourglass-time{font-size:clamp(32px,9vw,42px);font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums}
 .hourglass-state{font-size:11px;color:var(--muted);margin-top:4px;min-height:16px}
@@ -1039,7 +1039,7 @@ button,summary{min-height:44px}
    </svg>
    <div class="sky-progress-label" id="skyProgressLabel" aria-live="polite">今夜の星空</div>
    <div class="room-window-shelf planet-hourglass"><button class="desk-hourglass room-hourglass-shelf" id="hourglassStart" type="button" aria-label="5分間の休憩を始める">
-    <svg class="hourglass-art" id="hourglassArt" viewBox="0 0 100 120" role="img" aria-label="砂が落ちる砂時計"><path class="hourglass-frame" d="M27 7H73 M27 113H73 M31 9C31 35 48 43 50 60C52 77 69 85 69 111 M69 9C69 35 52 43 50 60C48 77 31 85 31 111"/><path class="hourglass-glass" d="M32 12C32 34 47 43 50 58C53 43 68 34 68 12Z M50 62C47 78 32 87 32 108H68C68 87 53 78 50 62Z"/><path class="hourglass-sand-top" id="hourglassSandTop" d="M35 15H65C64 31 57 39 50 48C43 39 36 31 35 15Z"/><path class="hourglass-sand-bottom" id="hourglassSandBottom" d="M35 105C37 89 43 82 50 74C57 82 63 89 65 105Z"/><path class="hourglass-stream" d="M50 48V74"/></svg>
+    <svg class="hourglass-art" id="hourglassArt" viewBox="0 0 100 120" role="img" aria-label="砂が落ちる砂時計"><path class="hourglass-frame" d="M27 7H73 M27 113H73 M31 9C31 35 48 43 50 60C52 77 69 85 69 111 M69 9C69 35 52 43 50 60C48 77 31 85 31 111"/><path class="hourglass-glass" d="M32 12C32 34 47 43 50 58C53 43 68 34 68 12Z M50 62C47 78 32 87 32 108H68C68 87 53 78 50 62Z"/><path class="hourglass-sand-top" id="hourglassSandTop" d="M35 15H65C64 31 57 39 50 48C43 39 36 31 35 15Z"/><path class="hourglass-sand-bottom" id="hourglassSandBottom" d="M35 105C37 89 43 82 50 74C57 82 63 89 65 105Z"/><path class="hourglass-stream" d="M50 48V74"/><circle class="hourglass-grain grain-a" cx="48.5" cy="50" r="1.5"/><circle class="hourglass-grain grain-b" cx="51.5" cy="50" r="1.5"/><circle class="hourglass-grain grain-c" cx="50" cy="50" r="1.6"/></svg>
     <span class="desk-hourglass-time" id="hourglassTime">05:00</span><span class="desk-hourglass-label" id="hourglassState">タップで休憩 · 長押しでリセット</span>
    </button></div>
    <div class="study-room-bottom"><div><div class="study-room-clock" id="studyRoomClock">15:00</div><div class="study-room-date" id="studyRoomDate">11月21日 土曜日</div></div><div class="study-room-foot">A LITTLE WORLD, SOMEWHERE</div></div>
