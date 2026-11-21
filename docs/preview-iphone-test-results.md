@@ -52,3 +52,21 @@ A later document-head audit found root-relative manifest and icon URLs that are 
 ## UI navigation retest required — 2026-11-21
 
 The preview now places the monthly calendar and analytics content in their matching bottom-navigation tabs. The automated regression test confirms the page structure and navigation render hook. Please manually verify the Calendar and Analytics tabs on iPhone Safari / Home Screen app after the latest deployment; no new manual device test has been performed for this UI change.
+
+
+## Study Room interaction repair — 2026-11-21
+
+A source audit found that the Study Room refresh replaced the entire view class list, unintentionally removing the `little-planet-view` layout class. The refresh now changes only the season/time classes. The hourglass container and button were also raised above decorative layers and given explicit touch-interaction properties. The preview Service Worker cache namespace was advanced to v3.
+
+Automated checks: 57/57 passed; production build succeeded; preview Pages deployment succeeded.
+
+Manual retest required on iPhone:
+- Open the Study Room and verify the planet/celestial scene retains its intended layout.
+- Tap the hourglass once; confirm it starts and the remaining time updates.
+- Tap again; confirm it pauses.
+- Long-press; confirm it resets to 05:00.
+- Watch for several seconds to confirm sand grains move.
+- Watch the scene for cloud/nebula/star/wind motion.
+- If all motion remains still, check iOS Settings > Accessibility > Motion > Reduce Motion. FOCUS intentionally respects that system preference.
+
+Production remains unchanged.
