@@ -34,7 +34,7 @@ export function createStorage(resolveStorage = () => globalThis.localStorage, { 
       }
     },
 
-    getJSON(key, fallback = null) {
+    removeText(key) {\n      try {\n        const target = getStorage();\n        if (!target) return false;\n        target.removeItem(storageKey(key));\n        return true;\n      } catch {\n        return false;\n      }\n    },\n\n    getJSON(key, fallback = null) {
       const raw = this.getText(key, null);
       if (raw === null) return fallback;
       try {
