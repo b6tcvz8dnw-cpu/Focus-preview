@@ -687,11 +687,11 @@ function createBackupImportHarness(options = {}) {
   const controller = createBackupImportController({
     input, storage, statsStore,
     validate: () => options.invalid ? { valid: false, reason: "invalid backup" } : checked,
-    buildCurrentBackup: () => ({ app: "FOCUS", version: 3, stats: { records: [] } }),
+    buildCurrentBackup: () => { if (options.snapshotFails) throw new Error("snapshot"); return { app: "FOCUS", version: 3, stats: { records: [] } }; },
     captureSettings: () => settingsSnapshot,
     confirmAction: () => options.confirm === false ? false : true,
     applySettings: () => { events.push("settings"); return !options.settingsFail; },
-    rollbackSettings: snapshot => { rollbacks.push(snapshot); events.push("rollback"); return true; },
+    rollbackSettings: snapshot => { rollbacks.push(snapshot); events.push("rollback"); return !options.rollbackFails; },
     onRefresh: () => refreshes.push(true),
     onSuccess: () => successes.push(true),
     onMessage: message => messages.push(message)
@@ -737,6 +737,22 @@ test("backup import rolls settings back when stats persistence fails", async () 
   assert.equal(h.replacements.length, 1);
   assert.equal(h.refreshes.length, 0);
   assert.equal(h.values.has("focus-preimport-backup"), true);
+});
+
+test("backup import reports rollback failure and preserves the pre-import snapshot", async () => {
+  const h = createBackupImportHarness({ statsFails: true, rollbackFails: true });
+  const result = await h.controller.importText("{}");
+  assert.equal(result.stage, "rollback");
+  assert.equal(h.values.has("focus-preimport-backup"), true);
+  assert.match(h.messages.at(-1), /設定の復元に失敗/);
+});
+
+test("backup import aborts safely when the current snapshot cannot be built", async () => {
+  const h = createBackupImportHarness({ snapshotFails: true });
+  const result = await h.controller.importText("{}");
+  assert.equal(result.stage, "snapshot");
+  assert.equal(h.events.length, 0);
+  assert.equal(h.replacements.length, 0);
 });
 
 test("backup import rejects malformed or unsupported files and respects cancellation", async () => {
