@@ -211,10 +211,10 @@ test("PWA manifest remains valid and standalone-capable", async () => {
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
 });
 
-test("preview service worker caches extracted modules in its own namespace", async () => {
+test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v9");
+  assert.equal(cacheName, "focus-preview-pwa-v10");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -222,6 +222,9 @@ test("preview service worker caches extracted modules in its own namespace", asy
   }
   assert.ok(sw.includes("caches.match"), "service worker should have a cache lookup");
   assert.ok(sw.includes("new URL(event.request.url).origin!==self.location.origin"), "third-party API requests must bypass the app cache");
+  assert.match(sw, /if\(!response \|\| !response\.ok\) return response;/, "HTTP errors must not be cached");
+  assert.match(sw, /event\.waitUntil\(write\)/, "cache writes must extend the fetch event lifetime");
+  assert.match(sw, /\.catch\(\(\)=>\{\}\)/, "cache write failure must not replace a successful network response");
 });
 
 test("formatClock keeps the existing MM:SS display contract", () => {
