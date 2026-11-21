@@ -1442,11 +1442,18 @@ test("stats replacement is transactional and only publishes after successful per
 
 function createViewHarness() {
   const elements = new Map();
-  const makeElement = () => ({
-    innerHTML: "", textContent: "", attributes: {},
-    setAttribute(name, value) { this.attributes[name] = String(value); },
-    classList: { toggle() {}, add() {}, remove() {} }
-  });
+  const makeElement = () => {
+    let html = "";
+    let htmlWrites = 0;
+    return {
+      get innerHTML() { return html; },
+      set innerHTML(value) { html = value; htmlWrites++; },
+      get innerHTMLWrites() { return htmlWrites; },
+      textContent: "", attributes: {},
+      setAttribute(name, value) { this.attributes[name] = String(value); },
+      classList: { toggle() {}, add() {}, remove() {} }
+    };
+  };
   const root = {
     getElementById(id) {
       if (!elements.has(id)) elements.set(id, makeElement());
@@ -1456,6 +1463,20 @@ function createViewHarness() {
   };
   return { root, elements, views: createStudyViews({ root }) };
 }
+
+test("study achievements skip redundant DOM renders until total minutes change", () => {
+  const h = createViewHarness();
+  const list = h.elements.get("achievementList");
+  h.views.renderAchievements(125);
+  const firstMarkup = list.innerHTML;
+  assert.equal(list.innerHTMLWrites, 1);
+  h.views.renderAchievements(125);
+  assert.equal(list.innerHTMLWrites, 1);
+  assert.equal(list.innerHTML, firstMarkup);
+  h.views.renderAchievements(126);
+  assert.equal(list.innerHTMLWrites, 2);
+  assert.match(h.elements.get("achievementNext").textContent, /あと54分/);
+});
 
 test("study views render weekly totals and goal progress from supplied data only", () => {
   const h = createViewHarness();
