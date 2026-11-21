@@ -15,7 +15,7 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
     {id:'evening',name:'夕方',from:16,to:19,sunX:'76%',sunY:'54%',message:'空の色が変わっていくのを、ゆっくり眺めよう。'},
     {id:'night',name:'夜',from:19,to:24,sunX:'70%',sunY:'18%',message:'遠くの明かりを眺めながら、静かな夜を過ごそう。'}
   ];
-  let roomWeather=null,roomWeatherLoading=false,roomWeatherAttempted=false,roomWeatherFetchedAt=0;
+  let roomWeather=null,roomWeatherLoading=false,roomWeatherAttempted=false,roomWeatherFetchedAt=0,destroyed=false,weatherRequest=null,weatherTimeout=null;
   const weatherLabels=code=>{
     if(code===0)return ['晴れ','☀'];if(code===1)return ['おおむね晴れ','🌤'];if(code===2)return ['晴れ時々くもり','⛅'];if(code===3)return ['くもり','☁'];
     if(code===45||code===48)return ['霧','🌫'];if([51,53,55,56,57].includes(code))return ['霧雨','🌦'];
@@ -45,14 +45,16 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
   async function loadWeather(force=false){
     if(roomWeatherLoading||(!force&&roomWeatherAttempted&&Date.now()-roomWeatherFetchedAt<30*60*1000))return;
     roomWeatherAttempted=true;roomWeatherLoading=true;showWeather('名古屋の天気を確認中…');
+    weatherRequest=typeof AbortController==='function'?new AbortController():null;
+    if(weatherRequest)weatherTimeout=window.setTimeout(()=>weatherRequest?.abort(),10000);
     try{
       const url='https://api.open-meteo.com/v1/forecast?latitude=35.1815&longitude=136.9066&current=temperature_2m,weather_code,wind_speed_10m,is_day&daily=weather_code,sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=1';
-      const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('weather');
+      const response=await fetch(url,{cache:'no-store',...(weatherRequest?{signal:weatherRequest.signal}:{})});if(!response.ok)throw new Error('weather');
       const data=await response.json();if(!data.current)throw new Error('weather');
       roomWeather={...data.current,sunrise:data.daily?.sunrise?.[0],sunset:data.daily?.sunset?.[0],high:data.daily?.temperature_2m_max?.[0],low:data.daily?.temperature_2m_min?.[0]};
-      roomWeatherFetchedAt=Date.now();applyWeather();
-    }catch(error){showWeather('名古屋の天気を取得できません · タップで再試行');roomWeatherAttempted=false;}
-    finally{roomWeatherLoading=false;}
+      roomWeatherFetchedAt=Date.now();if(!destroyed)applyWeather();
+    }catch(error){if(!destroyed){showWeather('名古屋の天気を取得できません · タップで再試行');roomWeatherAttempted=false;}}
+    finally{if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherTimeout=null;weatherRequest=null;roomWeatherLoading=false;}
   }
   function update(){
     const now=new Date(),month=now.getMonth(),hour=now.getHours();
@@ -69,8 +71,9 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
     $('studyRoomMessage').textContent=season.message+' '+time.message;
     if(roomWeather)applyWeather();
   }
-  $('studyRoomWeather').addEventListener('click',()=>{roomWeatherAttempted=false;loadWeather(true);});
+  const handleWeatherClick=()=>{roomWeatherAttempted=false;loadWeather(true);};
+  $('studyRoomWeather').addEventListener('click',handleWeatherClick);
   update();
   const interval=window.setInterval(update,60000);
-  return {update,updateSky,loadWeather,onVisible(){update();if(root.body?.classList.contains('study-room-fullscreen'))loadWeather();},destroy(){window.clearInterval(interval);}};
+  return {update,updateSky,loadWeather,onVisible(){if(destroyed)return;update();if(root.body?.classList.contains('study-room-fullscreen'))loadWeather();},destroy(){destroyed=true;window.clearInterval(interval);if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherRequest?.abort();$('studyRoomWeather').removeEventListener('click',handleWeatherClick);}};
 }
