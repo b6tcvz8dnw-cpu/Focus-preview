@@ -7,7 +7,7 @@ const THEMES = {
 };
 const MARKS = { dot: "●", star: "✦", leaf: "❧" };
 
-export function createAppearanceController({ root, storage }) {
+export function createAppearanceController({ root, storage, onMessage = () => {} }) {
   if (!root || !storage) throw new TypeError("root and storage are required");
   let theme = "green";
   let mark = "dot";
@@ -41,15 +41,23 @@ export function createAppearanceController({ root, storage }) {
 
   function setTheme(name, { persist = true } = {}) {
     theme = Object.hasOwn(THEMES, name) ? name : "green";
+    if (persist && !storage.setJSON("focus-appearance", { theme: name in THEMES ? name : "green", mark })) {
+      onMessage("テーマを保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。");
+      return false;
+    }
+    theme = Object.hasOwn(THEMES, name) ? name : "green";
     renderTheme(theme);
-    if (persist) storage.setJSON("focus-appearance", { theme, mark });
     return getState();
   }
 
   function setMark(name, { persist = true } = {}) {
-    mark = Object.hasOwn(MARKS, name) ? name : "dot";
+    const nextMark = Object.hasOwn(MARKS, name) ? name : "dot";
+    if (persist && !storage.setText("focus-mark", nextMark)) {
+      onMessage("マークを保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。");
+      return false;
+    }
+    mark = nextMark;
     renderMark(mark);
-    if (persist) storage.setText("focus-mark", mark);
     return getState();
   }
 
