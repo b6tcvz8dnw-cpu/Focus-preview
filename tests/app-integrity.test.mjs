@@ -18,6 +18,7 @@ import { inspectRecoverySnapshots } from "../src/data/recovery.js";
 import { writeStatsWithBackup } from "../src/data/transactions.js";
 import { createTimerController } from "../src/features/timer-controller.js";
 import { createAmbientSoundController } from "../src/features/ambient-sound.js";
+import { createNotificationController } from "../src/features/notification-controller.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -1254,4 +1255,88 @@ test("main delegates ambient sound controls to the dedicated controller", async 
   assert.ok(script.includes("ambientSound.setPreset"));
   assert.ok(script.includes("ambientSound.setVolume"));
   assert.doesNotMatch(script, /const ambientLayers=\{\}/);
+});
+
+
+function createNotificationHarness(options = {}) {
+  const values = new Map([["focus-notifications", options.initiallyEnabled ? "true" : "false"]]);
+  const messages = [];
+  const deliveries = [];
+  const button = {
+    textContent: "",
+    pressed: "false",
+    onclick: null,
+    setAttribute(name, value) { if (name === "aria-pressed") this.pressed = value; }
+  };
+  const root = { getElementById(id) { return id === "notificationToggle" ? button : null; } };
+  const storage = {
+    getText(key) { return values.get(key) ?? null; },
+    setText(key, value) { values.set(key, value); }
+  };
+  class FakeNotification {
+    static permission = options.permission ?? "default";
+    static requestPermission = async () => {
+      FakeNotification.permission = options.requestResult ?? "granted";
+      return FakeNotification.permission;
+    };
+    constructor(title, settings) { deliveries.push({ title, settings }); }
+  }
+  const controller = createNotificationController({
+    root,
+    storage,
+    getNotificationApi: () => options.unsupported ? undefined : FakeNotification,
+    onMessage: message => messages.push(message)
+  });
+  return { controller, button, storage, values, messages, deliveries, FakeNotification };
+}
+
+test("notification controller restores preference and toggles permission-gated notifications", async () => {
+  const h = createNotificationHarness();
+  assert.equal(h.button.textContent, "完了通知：オフ");
+  assert.equal(h.button.pressed, "false");
+  assert.equal(await h.controller.toggle(), true);
+  assert.equal(h.controller.isEnabled(), true);
+  assert.equal(h.values.get("focus-notifications"), "true");
+  assert.equal(h.button.pressed, "true");
+  assert.equal(h.FakeNotification.permission, "granted");
+  assert.equal(await h.controller.toggle(), true);
+  assert.equal(h.controller.isEnabled(), false);
+  assert.equal(h.values.get("focus-notifications"), "false");
+});
+
+test("notification controller keeps notifications disabled when permission is denied or unavailable", async () => {
+  const denied = createNotificationHarness({ requestResult: "denied" });
+  assert.equal(await denied.controller.toggle(), false);
+  assert.equal(denied.controller.isEnabled(), false);
+  assert.equal(denied.values.get("focus-notifications"), "false");
+  assert.match(denied.messages.at(-1), /許可されなかった/);
+
+  const unsupported = createNotificationHarness({ unsupported: true });
+  assert.equal(await unsupported.controller.toggle(), false);
+  assert.equal(unsupported.controller.isEnabled(), false);
+  assert.match(unsupported.messages.at(-1), /対応していない/);
+});
+
+test("notification delivery respects enabled state and backup restoration updates storage", () => {
+  const h = createNotificationHarness({ permission: "granted" });
+  h.controller.notify("テスト通知");
+  assert.equal(h.deliveries.length, 0);
+  h.controller.setEnabled(true);
+  h.controller.notify("集中セッション完了！");
+  assert.equal(h.deliveries.length, 1);
+  assert.equal(h.deliveries[0].title, "集中セッション完了！");
+  assert.equal(h.deliveries[0].settings.body, "FOCUS — 学習タイマー");
+  h.controller.setEnabled(false);
+  h.controller.notify("休憩終了！");
+  assert.equal(h.deliveries.length, 1);
+  assert.equal(h.values.get("focus-notifications"), "false");
+});
+
+test("main delegates notification settings, delivery, and backup restoration", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("createNotificationController"));
+  assert.ok(script.includes("notificationController.notify(title)"));
+  assert.ok(script.includes("notificationController.setEnabled(obj.notificationsEnabled)"));
+  assert.doesNotMatch(script, /new Notification\(/);
+  assert.doesNotMatch(script, /updateNotificationButton/);
 });
