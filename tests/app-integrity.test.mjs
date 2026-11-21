@@ -98,6 +98,15 @@ test("hourglass has visible falling-grain animation and viewBox-based sand scali
   assert.ok(html.includes(".hourglass-art.is-running .hourglass-stream{animation:none"));
 });
 
+test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
+  const html = await read("../index.html");
+  assert.ok(!html.includes("\\\\n.hourglass"));
+  assert.ok(html.includes("\n.hourglass-grain{fill:var(--accent)"));
+  assert.ok(html.includes("\n.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
+  const sw = await read("../public/sw.js");
+  assert.ok(sw.includes("focus-preview-pwa-v2"));
+});
+
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
