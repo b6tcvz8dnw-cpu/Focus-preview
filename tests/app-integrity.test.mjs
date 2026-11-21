@@ -1651,7 +1651,7 @@ test("main delegates notification settings, delivery, and backup restoration", a
 });
 
 
-function makeAppearanceFixture(saved = {}) {
+function makeAppearanceFixture(saved = {}, options = {}) {
   const values = new Map(Object.entries(saved));
   const makeButton = (value, attribute) => {
     const handlers = new Map();
@@ -1681,9 +1681,9 @@ function makeAppearanceFixture(saved = {}) {
   };
   const storage = {
     getText(key, fallback = null) { return values.has(key) ? values.get(key) : fallback; },
-    setText(key, value) { values.set(key, String(value)); return true; },
+    setText(key, value) { if (options.failWrite) return false; values.set(key, String(value)); return true; },
     getJSON(key, fallback = null) { try { return values.has(key) ? JSON.parse(values.get(key)) : fallback; } catch { return fallback; } },
-    setJSON(key, value) { values.set(key, JSON.stringify(value)); return true; }
+    setJSON(key, value) { if (options.failWrite) return false; values.set(key, JSON.stringify(value)); return true; }
   };
   return { root, storage, values, themes, marks, css, brand, meta };
 }
@@ -1715,6 +1715,23 @@ test("appearance controller applies and persists theme and mark choices", () => 
   assert.equal(fixture.brand.textContent, "❧");
   assert.equal(fixture.values.get("focus-mark"), "leaf");
   assert.equal(fixture.marks.find(button => button.dataset.mark === "leaf").attributes["aria-pressed"], "true");
+});
+
+test("appearance controller preserves the selected appearance when preference persistence fails", () => {
+  const fixture = makeAppearanceFixture({}, { failWrite: true });
+  const messages = [];
+  const controller = createAppearanceController({ ...fixture, onMessage: message => messages.push(message) });
+  controller.initialize();
+
+  assert.equal(controller.setTheme("rose"), false);
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
+  assert.equal(fixture.css.get("--bg"), "#101915");
+  assert.match(messages.at(-1), /テーマを保存できなかった/);
+
+  assert.equal(controller.setMark("leaf"), false);
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
+  assert.equal(fixture.brand.textContent, "●");
+  assert.match(messages.at(-1), /マークを保存できなかった/);
 });
 
 test("appearance controller falls back safely for unknown or corrupt stored preferences", () => {
