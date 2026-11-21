@@ -51,7 +51,7 @@ function update(){
  $('setLabel').textContent=(completed%cycle())+' / '+cycle()+' セッション';
  [...$('dots').children].forEach((d,i)=>d.classList.toggle('done',i<completed%cycle()));
  document.title=fmt(remaining)+' | FOCUS';
- document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+ document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
 }
 function setMode(m){if(running&&!confirm('タイマーを停止してモードを切り替える？'))return;stop();mode=m;finished=false;remaining=durations[m]*60;total=remaining;persistTimer();update();}
 let notificationsEnabled=storage.getText('focus-notifications')==='true';
@@ -60,7 +60,7 @@ $('notificationToggle').onclick=async()=>{if(!notificationsEnabled){if(!('Notifi
 function notify(title){if(notificationsEnabled&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body:'FOCUS — 学習タイマー'})}catch(e){}}$('toast').textContent=title}
 updateNotificationButton();
 function persistTimer(){try{storage.setJSON('focus-timer-runtime',{mode,remaining,deadline,running,finished,updatedAt:Date.now()})}catch(e){}}
-function startTimer(){if(remaining<=0)remaining=durations[mode]*60;finished=false;running=true;deadline=Date.now()+remaining*1000;if(interval)clearInterval(interval);interval=setInterval(tick,250);persistTimer();update()}
+function startTimer(){if(remaining<=0)remaining=durations[mode]*60;finished=false;running=true;deadline=Date.now()+remaining*1000;if(interval)clearInterval(interval);interval=setInterval(tick,1000);persistTimer();update()}
 function playCompletionSound(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=audioContext||new C();audioContext=c;c.resume().then(()=>{[660,880].forEach((hz,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.16;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.42);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45)})}).catch(()=>{})}catch(e){}}
 function complete(){const endedMode=mode;stop();remaining=0;if(endedMode==='focus'){completed++;minutes+=durations.focus;const key=dateKey(new Date());history[key]=(Number(history[key])||0)+durations.focus;save();mode=getNextBreakMode(completed,cycle());finished=false;remaining=durations[mode]*60;total=remaining;update();updateChart();notify('集中セッション完了！休憩を始めよう。');playCompletionSound();startTimer()}else{finished=true;update();notify('休憩終了！お疲れさま。');playCompletionSound();persistTimer()}}
 function tick(){if(!running)return;remaining=getRemainingSeconds(deadline);if(!remaining)complete();else{update()}}
@@ -109,7 +109,7 @@ function startHourglass(){
  if(hourglassRemaining<=0)hourglassRemaining=300;
  hourglassDeadline=Date.now()+hourglassRemaining*1000;hourglassRunning=true;
  if(hourglassInterval)clearInterval(hourglassInterval);
- hourglassInterval=window.setInterval(tickHourglass,250);renderHourglass();
+ hourglassInterval=window.setInterval(tickHourglass,1000);renderHourglass();
 }
 function tickHourglass(){
  if(!hourglassRunning)return;
@@ -218,7 +218,7 @@ function restoreTimerRuntime(){
   mode=saved.mode;finished=!!saved.finished;total=durations[mode]*60;
   if(saved.running&&Number.isFinite(Number(saved.deadline))&&Number(saved.deadline)>0){
    running=true;deadline=Number(saved.deadline);remaining=getRemainingSeconds(deadline);
-   if(remaining>0)interval=setInterval(tick,250);else{running=false;complete()}
+   if(remaining>0)interval=setInterval(tick,1000);else{running=false;complete()}
   }else{running=false;remaining=Math.max(0,Math.min(total,Number(saved.remaining)||total))}
  }catch(e){}
 }
