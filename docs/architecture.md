@@ -236,3 +236,12 @@
 - `src/main.js` wires the existing sound buttons and slider to the controller; sound types, presets, synthesis parameters, and settings UI remain unchanged.
 - Deterministic tests use a fake Web Audio graph to verify layer toggling, preset replacement, volume distribution, unsupported-browser handling, and cleanup.
 - iOS may suspend Web Audio when the PWA is backgrounded; this extraction does not add or promise background audio playback.
+
+
+## Notification controller
+
+- `src/features/notification-controller.js` owns the notification preference, permission request, accessible settings button state, browser notification delivery, and persistence of `focus-notifications`.
+- The controller receives the storage adapter, document root, Notification API provider, and message/state callbacks. Timer completion calls its `notify` method through the existing main-layer callback.
+- Backup restoration updates the controller through `setEnabled`, keeping the existing backup field and storage key unchanged.
+- Permission denial and unsupported browsers leave notifications disabled and report a user-facing message. Notification delivery remains best-effort; browser and iOS PWA lifecycle restrictions still apply.
+- Tests use a fake Notification API to verify permission grant/denial, unsupported environments, delivery gating, persistence, and backup restoration.
