@@ -26,7 +26,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト61項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト62項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -181,3 +181,9 @@
 - The main entry point now mounts the Study Room controller and calls its public update/load/visibility methods from page navigation and document visibility handling.
 - The existing Study Room markup, CSS, quiet-text setting, fullscreen control, and hourglass module remain separate and unchanged.
 - Added regression coverage for module boundaries and the timer/page/visibility integration.
+
+
+## Textless Study Room hourglass readout — 2026-11-21
+
+- The quiet-text mode continues to hide surrounding labels and information, but no longer hides the hourglass countdown digits.
+- Added a regression test ensuring the countdown remains visible while the hourglass label stays hidden.
