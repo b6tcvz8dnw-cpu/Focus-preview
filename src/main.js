@@ -63,7 +63,10 @@ $('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマー�
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>t.removeAttribute('aria-current'));return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>{const active=t===b;t.classList.toggle('active',active);if(active)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){studyRoom.update();studyRoom.loadWeather()}});
 const hourglass = mountHourglass({ getRemainingSeconds });
 const studyRoom = mountStudyRoom({ updateSky: updateStudySky });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()}});
+function refreshAfterReturn(){if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterReturn()});
+// iOS Safari may restore a page from the back-forward cache without a full reload.
+window.addEventListener('pageshow',event=>{if(event.persisted)refreshAfterReturn()});
 function setStudyRoomMode(enabled){
  document.body.classList.toggle('study-room-fullscreen',enabled);
  if(enabled&&screen.orientation&&typeof screen.orientation.lock==='function'){screen.orientation.lock('landscape').catch(()=>{})}
