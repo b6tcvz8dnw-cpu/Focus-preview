@@ -21,6 +21,7 @@ import { createAmbientSoundController } from "../src/features/ambient-sound.js";
 import { createNotificationController } from "../src/features/notification-controller.js";
 import { createAppearanceController } from "../src/features/appearance-controller.js";
 import { createRecoveryController } from "../src/features/recovery-controller.js";
+import { createBackupImportController } from "../src/features/backup-import-controller.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -123,7 +124,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v7"));
+  assert.ok(sw.includes("focus-preview-pwa-v8"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -181,12 +182,14 @@ test("existing local storage keys are preserved", async () => {
   const notificationController = await read("../src/features/notification-controller.js");
   const appearanceController = await read("../src/features/appearance-controller.js");
   const recoveryController = await read("../src/features/recovery-controller.js");
+  const backupImportController = await read("../src/features/backup-import-controller.js");
+  const storage = await read("../src/data/storage.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok((script + transactions + statsStore + timerController + notificationController + appearanceController + recoveryController).includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions + statsStore + timerController + notificationController + appearanceController + recoveryController + backupImportController).includes(key), "missing storage key: " + key);
   }
 });
 
@@ -200,7 +203,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v7");
+  assert.equal(cacheName, "focus-preview-pwa-v8");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -258,7 +261,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v7';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v8';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -274,7 +277,7 @@ test("storage adapter reads and writes text and JSON", () => {
   assert.equal(store.setText("theme", "night"), true);
   assert.equal(store.getText("theme"), "night");
   assert.equal(store.setJSON("settings", { focus: 25 }), true);
-  assert.deepEqual(store.getJSON("settings"), { focus: 25 });
+  assert.deepEqual(store.getJSON("settings"), { focus: 25 });\n  assert.equal(store.removeText("theme"), true);\n  assert.equal(store.getText("theme", null), null);
 });
 
 test("storage adapter supports a dedicated namespace without changing default keys", () => {
@@ -639,6 +642,128 @@ function createRecoveryHarness(initial = {}) {
   });
   return { values, storage, root, downloads, revoked, URLApi, messages, restored, replacements, controller };
 }
+
+function createBackupImportHarness(options = {}) {
+  const values = new Map(Object.entries(options.initial || {}));
+  const events = [];
+  const storage = {
+    getText: (key, fallback = null) => values.has(key) ? values.get(key) : fallback,
+    setText(key, value) { values.set(key, String(value)); return true; },
+    removeText(key) { values.delete(key); return true; },
+    setJSON(key, value) {
+      events.push("backup:" + key);
+      if (options.backupFails && key === "focus-preimport-backup") return false;
+      values.set(key, JSON.stringify(value));
+      return true;
+    }
+  };
+  const input = {
+    listeners: new Map(), value: "",
+    addEventListener(type, fn) { this.listeners.set(type, fn); },
+    removeEventListener(type, fn) { if (this.listeners.get(type) === fn) this.listeners.delete(type); }
+  };
+  const replacements = [];
+  const statsStore = {
+    replaceStats(stats) {
+      events.push("stats");
+      replacements.push(stats);
+      return options.statsFails ? { ok: false, stage: "stats" } : { ok: true, stage: "complete" };
+    }
+  };
+  const messages = [];
+  const refreshes = [];
+  const successes = [];
+  const rollbacks = [];
+  const settingsSnapshot = { timer: "old", appearance: "blue" };
+  const nextStats = { records: [{ id: "new", minutes: 25 }] };
+  const checked = { valid: true, data: {
+    stats: nextStats, timerSettings: { focus: 30 }, appearance: { theme: "rose" },
+    mark: "star", notificationsEnabled: true, quietText: true
+  }};
+  const controller = createBackupImportController({
+    input, storage, statsStore,
+    validate: () => options.invalid ? { valid: false, reason: "invalid backup" } : checked,
+    buildCurrentBackup: () => ({ app: "FOCUS", version: 3, stats: { records: [] } }),
+    captureSettings: () => settingsSnapshot,
+    confirmAction: () => options.confirm === false ? false : true,
+    applySettings: () => { events.push("settings"); return !options.settingsFail; },
+    rollbackSettings: snapshot => { rollbacks.push(snapshot); events.push("rollback"); return true; },
+    onRefresh: () => refreshes.push(true),
+    onSuccess: () => successes.push(true),
+    onMessage: message => messages.push(message)
+  });
+  return { values, events, input, replacements, messages, refreshes, successes, rollbacks, settingsSnapshot, checked, controller };
+}
+
+test("backup import controller validates, snapshots first, then applies settings and stats", async () => {
+  const h = createBackupImportHarness();
+  const result = await h.controller.importText(JSON.stringify({ app: "FOCUS" }));
+  assert.deepEqual(result, { ok: true, stage: "complete" });
+  assert.deepEqual(h.events.slice(0, 3), ["backup:focus-preimport-backup", "settings", "stats"]);
+  assert.equal(h.values.has("focus-preimport-backup"), true);
+  assert.deepEqual(h.replacements, [h.checked.data.stats]);
+  assert.equal(h.refreshes.length, 1);
+  assert.equal(h.successes.length, 1);
+  assert.match(h.messages.at(-1), /バックアップを読み込んだよ/);
+});
+
+test("backup import aborts before changing data when the pre-import snapshot fails", async () => {
+  const h = createBackupImportHarness({ backupFails: true });
+  const result = await h.controller.importText("{}");
+  assert.equal(result.stage, "backup");
+  assert.equal(h.events.length, 1);
+  assert.equal(h.replacements.length, 0);
+  assert.equal(h.rollbacks.length, 0);
+});
+
+test("backup import rolls settings back when a settings write fails", async () => {
+  const h = createBackupImportHarness({ settingsFail: true });
+  const result = await h.controller.importText("{}");
+  assert.equal(result.stage, "settings");
+  assert.deepEqual(h.rollbacks, [h.settingsSnapshot]);
+  assert.equal(h.replacements.length, 0);
+  assert.equal(h.refreshes.length, 0);
+});
+
+test("backup import rolls settings back when stats persistence fails", async () => {
+  const h = createBackupImportHarness({ statsFails: true });
+  const result = await h.controller.importText("{}");
+  assert.equal(result.stage, "stats");
+  assert.deepEqual(h.rollbacks, [h.settingsSnapshot]);
+  assert.equal(h.replacements.length, 1);
+  assert.equal(h.refreshes.length, 0);
+  assert.equal(h.values.has("focus-preimport-backup"), true);
+});
+
+test("backup import rejects malformed or unsupported files and respects cancellation", async () => {
+  const malformed = createBackupImportHarness();
+  assert.equal((await malformed.controller.importText("{broken")).stage, "parse");
+  const invalid = createBackupImportHarness({ invalid: true });
+  assert.equal((await invalid.controller.importText("{}")).stage, "validation");
+  const cancelled = createBackupImportHarness({ confirm: false });
+  assert.equal((await cancelled.controller.importText("{}")).stage, "cancelled");
+  assert.equal(cancelled.events.length, 0);
+});
+
+test("backup import file input is reset after processing and listener is removable", async () => {
+  const h = createBackupImportHarness({ invalid: true });
+  const handler = h.input.listeners.get("change");
+  const event = { target: { files: [{ text: async () => "{}" }], value: "selected" } };
+  await handler(event);
+  assert.equal(event.target.value, "");
+  h.controller.destroy();
+  assert.equal(h.input.listeners.has("change"), false);
+});
+
+test("main delegates backup import orchestration outside the entry point", async () => {
+  const main = await read("../src/main.js");
+  const controller = await read("../src/features/backup-import-controller.js");
+  assert.ok(main.includes("createBackupImportController("));
+  assert.ok(!main.includes("$('importData').onchange"));
+  assert.ok(controller.includes("focus-preimport-backup"));
+  assert.ok(controller.includes("captureSettings"));
+  assert.ok(controller.includes("rollbackSettings"));
+});
 
 test("recovery controller renders available snapshots and keeps non-restorable data export-only", () => {
   const h = createRecoveryHarness({
@@ -1443,7 +1568,8 @@ test("main delegates notification settings, delivery, and backup restoration", a
   const script = await read("../src/main.js");
   assert.ok(script.includes("createNotificationController"));
   assert.ok(script.includes("notificationController.notify(title)"));
-  assert.ok(script.includes("notificationController.setEnabled(obj.notificationsEnabled)"));
+  assert.ok(script.includes("createBackupImportController("));
+  assert.ok(script.includes("notificationController.setEnabled(obj.notificationsEnabled,{persist:false})"));
   assert.doesNotMatch(script, /new Notification\(/);
   assert.doesNotMatch(script, /updateNotificationButton/);
 });
