@@ -227,3 +227,12 @@
 - Reflection text and record IDs are escaped before being inserted into history markup.
 - Added tests for weekly totals, goals, calendar output, safe history rendering, analytics periods, and main/view integration.
 - Manual iPhone validation is still required for all affected pages and interactions.
+
+
+## Ambient sound controller
+
+- `src/features/ambient-sound.js` owns generated ambient audio layers, preset composition, volume updates, accessible button state, and stopping active sources.
+- The controller receives the document root, AudioContext constructor provider, volume provider, and unsupported-audio callback as dependencies. It does not read application storage or timer state.
+- `src/main.js` wires the existing sound buttons and slider to the controller; sound types, presets, synthesis parameters, and settings UI remain unchanged.
+- Deterministic tests use a fake Web Audio graph to verify layer toggling, preset replacement, volume distribution, unsupported-browser handling, and cleanup.
+- iOS may suspend Web Audio when the PWA is backgrounded; this extraction does not add or promise background audio playback.
