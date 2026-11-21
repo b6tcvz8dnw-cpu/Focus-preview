@@ -12,7 +12,6 @@ let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
 function cycle(){return Math.max(2,Math.min(8,+$('cycleDuration').value||4))}
 function syncStatsState(state){completed=state.completed;minutes=state.minutes;history=state.history;records=state.records;dailyGoal=state.dailyGoal;weeklyGoal=state.weeklyGoal}
-function save(){return statsStore?statsStore.save():false}
 function getWeekData(){return buildWeekData(history)}
 function updateStudySky(){
  const todayMinutes=Math.max(0,Number(history[dateKey(new Date())]||0));
