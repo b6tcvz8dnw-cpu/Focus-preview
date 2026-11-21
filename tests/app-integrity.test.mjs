@@ -144,13 +144,14 @@ test("core timer and Study Room functions remain present", async () => {
   const script = await read("../src/main.js");
   for (const name of [
     "startTimer", "persistTimer", "restoreTimerRuntime", "complete",
-    "tick", "updateStudyRoom", "updateStudySky",
-    "loadStudyRoomWeather"
+    "tick", "updateStudySky"
   ]) {
     assert.ok(script.includes("function " + name + "("), "missing function " + name);
   }
   const hourglass = await read("../src/features/hourglass.js");
+  const room = await read("../src/features/study-room.js");
   assert.ok(hourglass.includes("export function mountHourglass"));
+  assert.ok(room.includes("export function mountStudyRoom"));
 });
 
 test("existing local storage keys are preserved", async () => {
@@ -707,9 +708,10 @@ test("study room refresh preserves its structural class and visual state", async
   const html = await read("../index.html");
   const main = await read("../src/main.js");
   assert.match(html, /class="study-room-view little-planet-view season-/);
-  assert.match(main, /for\(const name of \[\.\.\.view\.classList\]\)/);
-  assert.match(main, /view\.classList\.add\('season-'\+season\.id,'time-'\+time\.id\)/);
-  assert.doesNotMatch(main, /view\.className\s*=/);
+  const room = await read("../src/features/study-room.js");
+  assert.match(room, /for\(const name of \[\.\.\.view\.classList\]\)/);
+  assert.ok(room.includes("view.classList.add('season-'+season.id,'time-'+time.id)"));
+  assert.doesNotMatch(room, /view\.className\s*=/);
 });
 
 test("study room hourglass remains above decorative layers and accepts touch input", async () => {
