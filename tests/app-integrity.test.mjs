@@ -20,6 +20,7 @@ import { createTimerController } from "../src/features/timer-controller.js";
 import { createAmbientSoundController } from "../src/features/ambient-sound.js";
 import { createNotificationController } from "../src/features/notification-controller.js";
 import { createAppearanceController } from "../src/features/appearance-controller.js";
+import { createRecoveryController } from "../src/features/recovery-controller.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -122,7 +123,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v6"));
+  assert.ok(sw.includes("focus-preview-pwa-v7"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -198,7 +199,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v6");
+  assert.equal(cacheName, "focus-preview-pwa-v7");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -256,7 +257,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v6';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v7';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -594,6 +595,105 @@ test("package scripts expose development, build, and preview commands", async ()
 });
 
 
+function createRecoveryHarness(initial = {}) {
+  const values = new Map(Object.entries(initial).map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)]));
+  const storage = {
+    getText: (key, fallback = null) => values.has(key) ? values.get(key) : fallback,
+    setText: (key, value) => { values.set(key, String(value)); return true; }
+  };
+  const makeNode = tag => ({
+    tag, children: [], dataset: {}, attributes: {}, className: "", textContent: "",
+    appendChild(child) { this.children.push(child); },
+    append(...children) { this.children.push(...children); },
+    replaceChildren(...children) { this.children = [...children]; },
+    addEventListener(type, callback) { this.listener = callback; },
+    removeEventListener(type, callback) { if (this.listener === callback) this.listener = null; },
+    click() { this.clicked = true; }
+  });
+  const root = makeNode("section");
+  const downloads = [];
+  const revoked = [];
+  const documentRef = { createElement: tag => {
+    const node = makeNode(tag);
+    if (tag === "a") downloads.push(node);
+    return node;
+  }};
+  class FakeBlob { constructor(parts, options) { this.parts = parts; this.options = options; } }
+  const URLApi = {
+    createObjectURL: blob => { URLApi.lastBlob = blob; return "blob:recovery"; },
+    revokeObjectURL: url => revoked.push(url)
+  };
+  const messages = [];
+  const restored = [];
+  const replacements = [];
+  const statsStore = {
+    replaceStats: stats => { replacements.push(stats); return { ok: true }; }
+  };
+  const controller = createRecoveryController({
+    root, storage, statsStore, documentRef, URLApi, BlobCtor: FakeBlob,
+    schedule: callback => { callback(); },
+    confirmAction: () => true,
+    onMessage: message => messages.push(message),
+    onRestored: () => restored.push(true)
+  });
+  return { values, storage, root, downloads, revoked, URLApi, messages, restored, replacements, controller };
+}
+
+test("recovery controller renders available snapshots and keeps non-restorable data export-only", () => {
+  const h = createRecoveryHarness({
+    "focus-preimport-backup": {
+      app: "FOCUS", version: 2, stats: { completed: 1, minutes: 25, records: [] }
+    },
+    "focus-corrupt-stats-backup": "{broken"
+  });
+  const items = h.controller.render();
+  assert.equal(items.filter(item => item.available).length, 2);
+  assert.equal(h.root.children.length, 2);
+  const importedActions = h.root.children[0].children[2].children;
+  const corruptActions = h.root.children[1].children[2].children;
+  assert.equal(importedActions.length, 2);
+  assert.equal(corruptActions.length, 1);
+  assert.equal(corruptActions[0].dataset.recoveryDownload, "focus-corrupt-stats-backup");
+  h.controller.destroy();
+  assert.equal(h.root.listener, null);
+});
+
+test("recovery controller exports raw snapshots and protects current stats before restore", () => {
+  const h = createRecoveryHarness({
+    "focus-preimport-backup": {
+      app: "FOCUS", version: 2,
+      stats: { completed: 1, minutes: 25, history: {}, records: [] }
+    },
+    "focus-stats": JSON.stringify({ completed: 9, minutes: 225, records: [] })
+  });
+  h.controller.render();
+  const corruptExport = h.controller.downloadSnapshot("focus-preimport-backup");
+  assert.equal(corruptExport, true);
+  assert.equal(h.downloads[0].download, "focus-recovery-focus-preimport-backup.json");
+  assert.equal(h.URLApi.lastBlob.options.type, "application/json");
+  assert.deepEqual(h.revoked, ["blob:recovery"]);
+  const restored = h.controller.restoreSnapshot("focus-preimport-backup");
+  assert.equal(restored, true);
+  assert.equal(h.values.get("focus-pre-recovery-raw-stats"), JSON.stringify({ completed: 9, minutes: 225, records: [] }));
+  assert.equal(h.replacements.length, 1);
+  assert.equal(h.restored.length, 1);
+  assert.match(h.messages.at(-1), /復元直前のデータも端末内に保護/);
+});
+
+test("recovery controller aborts restore when the pre-restore snapshot cannot be saved", () => {
+  const h = createRecoveryHarness({
+    "focus-preimport-backup": {
+      app: "FOCUS", version: 2, stats: { completed: 1, minutes: 25, records: [] }
+    },
+    "focus-stats": JSON.stringify({ completed: 4, minutes: 100, records: [] })
+  });
+  h.storage.setText = () => false;
+  assert.equal(h.controller.restoreSnapshot("focus-preimport-backup"), false);
+  assert.equal(h.replacements.length, 0);
+  assert.equal(h.restored.length, 0);
+  assert.match(h.messages[0], /保護できなかったため、復元を中止/);
+});
+
 test("recovery inspection exposes restorable snapshots and preserves corrupt originals", () => {
   const values = new Map([
     ["focus-preimport-backup", JSON.stringify({
@@ -632,15 +732,18 @@ test("recovery inspection refuses to downgrade a future data schema", () => {
   assert.equal(item.restorable, false);
 });
 
-test("settings expose recovery controls and main wires safe restore/export actions", async () => {
+test("settings expose recovery controls and main delegates recovery actions", async () => {
   const html = await read("../index.html");
   const main = await read("../src/main.js");
+  const controller = await read("../src/features/recovery-controller.js");
   assert.ok(html.includes('id="recoveryList"'));
   assert.ok(html.includes("復旧用データの確認・復元"));
-  assert.ok(main.includes("focus-pre-recovery-raw-stats"));
-  assert.ok(main.includes("復元直前のデータを保護できなかったため、復元を中止"));
-  assert.ok(main.includes("downloadRecoverySnapshot"));
-  assert.ok(main.includes("restoreRecoverySnapshot"));
+  assert.ok(main.includes("createRecoveryController("));
+  assert.ok(main.includes("recoveryController.render()"));
+  assert.ok(!main.includes("function downloadRecoverySnapshot"));
+  assert.ok(!main.includes("function restoreRecoverySnapshot"));
+  assert.ok(controller.includes("focus-pre-recovery-raw-stats"));
+  assert.ok(controller.includes("復元直前のデータを保護できなかったため、復元を中止"));
 });
 
 
