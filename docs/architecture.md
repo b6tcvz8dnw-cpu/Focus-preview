@@ -26,7 +26,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト47項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト49項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -134,3 +134,13 @@
 - Calendar redraws when its tab opens; analytics redraws on entry and when its range changes.
 - Added a regression test confirming each panel is mounted in its matching page and not in Overview.
 - Latest preview quality workflow: 47/47 tests passed; production build succeeded. Preview Pages deployment succeeded for commit `3ef042a04ec631a1d3c11638e89515808d271902`.
+
+
+## Settings UX audit — 2026-11-21
+
+- Added a clear Settings heading, short explanatory copy, and an explicit return-to-Timer action.
+- Applying changed timer durations now asks for confirmation when the current session is running or has elapsed from its starting state; cancelling leaves the current timer untouched.
+- Added two regression tests for the Settings return path and timer reset warning.
+- Latest preview quality checks: 49 tests passed, 0 failed; Vite production build succeeded.
+- Preview Pages deployment succeeded for commit `c6358e67e5b9ebd71ccc063b034a77ed43127d21`.
+- Manual iPhone validation of this latest settings change remains outstanding.
