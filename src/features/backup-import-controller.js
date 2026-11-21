@@ -51,7 +51,7 @@ export function createBackupImportController({
       }
       settingsApplied = true;
     } catch {
-      rollbackSettings(currentSnapshot);
+      rollbackSettings(settingsSnapshot);
       onMessage("設定の反映に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。");
       return { ok: false, stage: "settings" };
     }
