@@ -121,7 +121,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v4"));
+  assert.ok(sw.includes("focus-preview-pwa-v5"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -195,7 +195,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v4");
+  assert.equal(cacheName, "focus-preview-pwa-v5");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -253,7 +253,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v4';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v5';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
