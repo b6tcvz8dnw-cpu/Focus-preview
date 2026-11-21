@@ -1123,7 +1123,7 @@ test("hourglass countdown is isolated from the main application entry point", as
   assert.ok(main.includes("const hourglass = mountHourglass({ getRemainingSeconds })"));
   assert.doesNotMatch(main, /function (start|stop|tick|reset)Hourglass/);
   assert.ok(hourglass.includes("export function mountHourglass"));
-  assert.ok(hourglass.includes("return { tick, reset, getState:"));
+  assert.ok(hourglass.includes("return { tick, reset, setVisible, getState:"));
 });
 
 
@@ -1149,7 +1149,7 @@ test("Study Room keeps weather refresh, date updates, and sky progress connected
   const main = await read("../src/main.js");
   const room = await read("../src/features/study-room.js");
   assert.ok(main.includes("studyRoom.update();studyRoom.loadWeather()"));
-  assert.ok(main.includes("hourglass.tick();studyRoom.onVisible()"));
+  assert.ok(main.includes("hourglass.tick();timerController.setVisible(true);hourglass.setVisible(true);studyRoom.onVisible()"));
   assert.ok(room.includes("window.setInterval(()=>{if(!root.hidden&&!$('studyRoomPage')?.hidden)update()},60000)"));
   assert.ok(room.includes("updateSky();"));
   assert.ok(room.includes("studyRoomWeather').addEventListener('click'"));
