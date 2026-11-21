@@ -1,4 +1,4 @@
-const CACHE='focus-preview-pwa-v9';
+const CACHE='focus-preview-pwa-v10';
 const CACHE_PREFIX='focus-preview-';
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...BUILD_ASSETS];
@@ -19,6 +19,15 @@ self.addEventListener('activate',event=>{
   );
 });
 
+function cacheSuccessfulResponse(event,request,response){
+  if(!response || !response.ok) return response;
+  const write=caches.open(CACHE)
+    .then(cache=>cache.put(request,response.clone()))
+    .catch(()=>{});
+  event.waitUntil(write);
+  return response;
+}
+
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
   // Keep third-party APIs (notably live weather) out of the app-shell cache.
@@ -26,21 +35,13 @@ self.addEventListener('fetch',event=>{
   if(event.request.mode==='navigate' || event.request.url.endsWith('/index.html')){
     event.respondWith(
       fetch(event.request)
-        .then(response=>{
-          const copy=response.clone();
-          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-          return response;
-        })
+        .then(response=>cacheSuccessfulResponse(event,event.request,response))
         .catch(()=>caches.match(event.request).then(hit=>hit||caches.match('./index.html')))
     );
     return;
   }
   event.respondWith(
     caches.match(event.request)
-      .then(hit=>hit||fetch(event.request).then(response=>{
-        const copy=response.clone();
-        caches.open(CACHE).then(cache=>cache.put(event.request,copy));
-        return response;
-      }))
+      .then(hit=>hit||fetch(event.request).then(response=>cacheSuccessfulResponse(event,event.request,response)))
   );
 });
