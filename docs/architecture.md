@@ -8,7 +8,7 @@
 
 - HTMLエントリーポイント: `index.html`
 - JavaScriptエントリーポイント: `src/main.js`（ES module）
-- HTML/CSS: HTMLは `index.html`、CSSは引き続きインライン
+- HTML/CSS: HTMLは `index.html`、CSSは `src/styles/` の責務別ファイル
 - JavaScript: `src/main.js` と `src/core/`・`src/data/` のモジュールに分割開始
 - `index.html`: 約91 KB / 約1,330行（JavaScript本体を外部化）
 - インラインJavaScript: 約254行、約40個の関数
@@ -27,7 +27,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト63項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト69項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
