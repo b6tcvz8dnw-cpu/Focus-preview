@@ -121,7 +121,6 @@ const ambientSound = createAmbientSoundController({
 document.querySelectorAll('[data-sound]').forEach(b=>b.onclick=()=>ambientSound.toggle(b.dataset.sound));
 document.querySelectorAll('[data-sound-preset]').forEach(b=>b.onclick=()=>ambientSound.setPreset(b.dataset.soundPreset));
 $('soundVolume').oninput=()=>ambientSound.setVolume(Number($('soundVolume').value)/100);
-window.addEventListener('pagehide',()=>ambientSound.stop());
 function buildBackupPayload(){return {app:'FOCUS',version:CURRENT_BACKUP_VERSION,exportedAt:new Date().toISOString(),stats:statsStore.exportStats(),timerSettings:normalizeTimerSettings(storage.getJSON('focus-timer-settings',null)),appearance:storage.getJSON('focus-appearance',null),mark:storage.getText('focus-mark')||'dot',notificationsEnabled,quietText:storage.getText('focus-room-quiet-text')==='true'}}
 function downloadBackup(payload,filename){const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('exportData').onclick=()=>{downloadBackup(buildBackupPayload(),'focus-backup-'+dateKey(new Date())+'.json');$('toast').textContent='バックアップを書き出したよ。'};
