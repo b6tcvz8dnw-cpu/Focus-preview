@@ -84,10 +84,10 @@ test("PWA manifest remains valid and standalone-capable", async () => {
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
 });
 
-test("service worker caches all extracted modules with a new version", async () => {
+test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-pwa-v41");
+  assert.equal(cacheName, "focus-preview-pwa-v1");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
