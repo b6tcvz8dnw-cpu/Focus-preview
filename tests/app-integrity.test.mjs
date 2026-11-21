@@ -17,6 +17,15 @@ import { writeStatsWithBackup } from "../src/data/transactions.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
+const readStyles = async () => (await Promise.all([
+  read("../src/styles/foundation.css"),
+  read("../src/styles/study-room.css"),
+  read("../src/styles/app-components.css"),
+  read("../src/styles/device-layout.css"),
+  read("../src/styles/study-room-visuals.css"),
+  read("../src/styles/accessibility.css")
+])).join("\n");
+
 test("main document has a valid Japanese HTML shell", async () => {
   const html = await read("../index.html");
   assert.ok(html.toLowerCase().includes("<!doctype html>"));
@@ -61,15 +70,13 @@ test("applying timer settings warns before resetting an active session", async (
 });
 
 test("interactive controls have visible keyboard focus and comfortable touch targets", async () => {
-  const html = await read("../index.html");
-  assert.ok(html.includes(":focus-visible"));
-  assert.ok(html.includes("button,summary{min-height:44px}"));
-  assert.ok(html.includes(".tab{min-height:48px}"));
-  assert.ok(html.includes("@media(prefers-reduced-motion:reduce)"));
-  assert.ok(html.includes("animation:none!important"));
-});
-
-test("timer display exposes timer semantics and decorative ring is hidden", async () => {
+  const css = await readStyles();
+  assert.ok(css.includes(":focus-visible"));
+  assert.ok(css.includes("button,summary{min-height:44px}"));
+  assert.ok(css.includes(".tab{min-height:48px}"));
+  assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"));
+  assert.ok(css.includes("animation:none!important"));
+});test("timer display exposes timer semantics and decorative ring is hidden", async () => {
   const html = await read("../index.html");
   assert.ok(html.includes('id="clock" role="timer"'));
   assert.ok(html.includes('class="ring" viewBox="0 0 200 200" aria-hidden="true"'));
@@ -89,26 +96,23 @@ test("countdown intervals match the one-second display precision", async () => {
 
 test("hourglass has visible falling-grain animation and viewBox-based sand scaling", async () => {
   const html = await read("../index.html");
-  assert.ok(html.includes("transform-box:view-box"));
-  assert.ok(html.includes("@keyframes sand-flow"));
-  assert.ok(html.includes("@keyframes sand-grain-fall"));
-  assert.doesNotMatch(html, /\\n\.hourglass/);
+  const css = await readStyles();
+  assert.ok(css.includes("transform-box:view-box"));
+  assert.ok(css.includes("@keyframes sand-flow"));
+  assert.ok(css.includes("@keyframes sand-grain-fall"));
+  assert.doesNotMatch(css, /\\n\\.hourglass/);
   assert.ok(html.includes('class="hourglass-grain grain-b"'));
   assert.ok(html.includes('class="hourglass-grain grain-c"'));
-  assert.ok(html.includes(".hourglass-art.is-running .hourglass-grain"));
-  assert.ok(html.includes(".hourglass-art.is-running .hourglass-stream{animation:none"));
-});
-
-test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
-  const html = await read("../index.html");
-  assert.doesNotMatch(html, /\\n\.hourglass/);
-  assert.ok(html.includes("\n.hourglass-grain{fill:var(--accent)"));
-  assert.ok(html.includes("\n.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
+  assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain"));
+  assert.ok(css.includes(".hourglass-art.is-running .hourglass-stream{animation:none"));
+});test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
+  const css = await readStyles();
+  assert.doesNotMatch(css, /\\n\\.hourglass/);
+  assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
+  assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
   assert.ok(sw.includes("focus-preview-pwa-v3"));
-});
-
-test("calendar and analytics panels are mounted in their matching tabs", async () => {
+});test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
   const calendarStart = html.indexOf('<div class="page" id="calendarPage"');
@@ -715,39 +719,32 @@ test("study room refresh preserves its structural class and visual state", async
 });
 
 test("study room hourglass remains above decorative layers and accepts touch input", async () => {
-  const html = await read("../index.html");
+  const css = await readStyles();
   const main = await read("../src/main.js");
-  assert.match(html, /\.planet-hourglass\{[^}]*z-index:30;pointer-events:auto;touch-action:manipulation/s);
-  assert.match(html, /\.desk-hourglass\{[^}]*pointer-events:auto;touch-action:manipulation/s);
+  assert.match(css, /\\.planet-hourglass\\{[^}]*z-index:30;pointer-events:auto;touch-action:manipulation/s);
+  assert.match(css, /\\.desk-hourglass\\{[^}]*pointer-events:auto;touch-action:manipulation/s);
   const hourglass = await read("../src/features/hourglass.js");
-  assert.match(main, /mountHourglass\(\{ getRemainingSeconds \}\)/);
-  assert.match(hourglass, /button\.addEventListener\('click'/);
-  assert.match(hourglass, /button\.addEventListener\('pointerdown'/);
-  assert.match(hourglass, /window\.setInterval\(tick, 1000\)/);
-  assert.match(hourglass, /getState: \(\) => \(\{ duration, remaining, running, deadline \}\)/);
-});
-
-test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
-  const html = await read("../index.html");
-  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*inset:0!important/);
-  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*width:100%!important;height:100%!important/);
-  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*transform:none!important/);
-  assert.match(html, /\.planet-hourglass \.desk-hourglass-time\{display:block!important/);
-  assert.match(html, /\.planet-hourglass \.desk-hourglass-label\{display:block!important/);
-});
-
-test("study room contains active celestial motion and a reduced-motion fallback", async () => {
-  const html = await read("../index.html");
-  assert.ok(html.includes("@keyframes star-twinkle"));
-  assert.ok(html.includes("@keyframes nebula-breathe"));
-  assert.ok(html.includes("@keyframes shooting-one"));
-  assert.ok(html.includes("@keyframes room-butterfly-flight"));
-  assert.ok(html.includes("@media(prefers-reduced-motion:reduce)"));
-  assert.ok(html.includes("cosmic-motion .wind-ribbons"));
-});
-
-
-test("hourglass countdown is isolated from the main application entry point", async () => {
+  assert.match(main, /mountHourglass\\(\\{ getRemainingSeconds \\}\\)/);
+  assert.match(hourglass, /button\\.addEventListener\\('click'/);
+  assert.match(hourglass, /button\\.addEventListener\\('pointerdown'/);
+  assert.match(hourglass, /window\\.setInterval\\(tick, 1000\\)/);
+  assert.match(hourglass, /getState: \\(\\) => \\(\\{ duration, remaining, running, deadline \\}\\)/);
+});test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
+  const css = await readStyles();
+  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*inset:0!important/);
+  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*width:100%!important;height:100%!important/);
+  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*transform:none!important/);
+  assert.match(css, /\\.planet-hourglass \\.desk-hourglass-time\\{display:block!important/);
+  assert.match(css, /\\.planet-hourglass \\.desk-hourglass-label\\{display:block!important/);
+});test("study room contains active celestial motion and a reduced-motion fallback", async () => {
+  const css = await readStyles();
+  assert.ok(css.includes("@keyframes star-twinkle"));
+  assert.ok(css.includes("@keyframes nebula-breathe"));
+  assert.ok(css.includes("@keyframes shooting-one"));
+  assert.ok(css.includes("@keyframes room-butterfly-flight"));
+  assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"));
+  assert.ok(css.includes("cosmic-motion .wind-ribbons"));
+});test("hourglass countdown is isolated from the main application entry point", async () => {
   const main = await read("../src/main.js");
   const hourglass = await read("../src/features/hourglass.js");
   assert.ok(main.includes("import { mountHourglass } from './features/hourglass.js'"));
@@ -784,10 +781,22 @@ test("Study Room keeps weather refresh, date updates, and sky progress connected
 
 
 test("textless Study Room mode keeps only the hourglass countdown visible", async () => {
-  const html = await read("../index.html");
-  const rule = html.split("\n").find(line => line.includes(".study-room-view.room-quiet-text .study-room-kicker"));
+  const css = await readStyles();
+  const rule = css.split("\n").find(line => line.includes(".study-room-view.room-quiet-text .study-room-kicker"));
   assert.ok(rule);
   assert.doesNotMatch(rule, /desk-hourglass-time/);
-  assert.match(rule, /desk-hourglass-label\{display:none!important\}/);
-  assert.match(html, /\.desk-hourglass-time\{font-size:16px/);
+  assert.match(rule, /desk-hourglass-label\\{display:none!important\\}/);
+  assert.match(css, /\\.desk-hourglass-time\\{font-size:16px/);
+});
+test("CSS is split into ordered feature stylesheets without inline styles", async () => {
+  const html = await read("../index.html");
+  const entry = await read("../src/styles/main.css");
+  const expected = cssFiles.map(name => `@import "./${name}";`).join("\n");
+  assert.ok(html.includes('<link rel="stylesheet" href="./src/styles/main.css">'));
+  assert.doesNotMatch(html, /<style(?:\\s|>)/i);
+  assert.equal(entry.trim(), expected);
+  const css = await readStyles();
+  assert.ok(css.includes(":root{color-scheme:dark"));
+  assert.ok(css.includes("@keyframes star-twinkle"));
+  assert.ok(css.includes(":focus-visible"));
 });
