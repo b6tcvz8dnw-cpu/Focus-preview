@@ -287,3 +287,12 @@
 - Added regression coverage for failed writes across all stats mutation operations.
 
 - The entry-point audit also removed an obsolete recovery-data import and unused audio state fields left behind by earlier feature extractions.
+
+
+## Phase 6 — network and lifecycle audit — 2026-11-22
+
+- The service worker previously cached every successful GET response, including third-party weather API responses. Its cache-first lookup could then return an old weather response despite the feature requesting `cache: 'no-store'`.
+- The fetch handler now bypasses all cross-origin requests. The cache namespace was bumped to `focus-preview-pwa-v9`, which also removes the previous preview cache during activation.
+- Study Room weather requests now use an abort controller with a 10-second timeout. The scene cancels pending work and removes its weather click listener when destroyed; late responses cannot update the detached scene.
+- Backup import now catches failures while creating the pre-import snapshot and checks whether settings rollback actually succeeded. The user is explicitly warned if rollback is incomplete; the pre-import snapshot remains available.
+- Regression tests cover external request bypass, weather request timeout/teardown, snapshot preparation failure, and rollback failure.
