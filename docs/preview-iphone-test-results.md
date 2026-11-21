@@ -47,3 +47,8 @@ After the iPhone smoke test, the preview import flow was strengthened:
 ## PWA asset path follow-up
 
 A later document-head audit found root-relative manifest and icon URLs that are not appropriate for a GitHub Pages project path. These were changed to relative URLs and covered by a regression test. Please recheck Home Screen installation after the corrected deployment; the earlier manual check predates this fix.
+
+
+## UI navigation retest required — 2026-11-21
+
+The preview now places the monthly calendar and analytics content in their matching bottom-navigation tabs. The automated regression test confirms the page structure and navigation render hook. Please manually verify the Calendar and Analytics tabs on iPhone Safari / Home Screen app after the latest deployment; no new manual device test has been performed for this UI change.
