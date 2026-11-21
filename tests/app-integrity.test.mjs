@@ -76,7 +76,9 @@ test("interactive controls have visible keyboard focus and comfortable touch tar
   assert.ok(css.includes(".tab{min-height:48px}"));
   assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"));
   assert.ok(css.includes("animation:none!important"));
-});test("timer display exposes timer semantics and decorative ring is hidden", async () => {
+});
+
+test("timer display exposes timer semantics and decorative ring is hidden", async () => {
   const html = await read("../index.html");
   assert.ok(html.includes('id="clock" role="timer"'));
   assert.ok(html.includes('class="ring" viewBox="0 0 200 200" aria-hidden="true"'));
@@ -105,14 +107,18 @@ test("hourglass has visible falling-grain animation and viewBox-based sand scali
   assert.ok(html.includes('class="hourglass-grain grain-c"'));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-stream{animation:none"));
-});test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
+});
+
+test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
   const css = await readStyles();
   assert.doesNotMatch(css, /\\n\\.hourglass/);
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
   assert.ok(sw.includes("focus-preview-pwa-v3"));
-});test("calendar and analytics panels are mounted in their matching tabs", async () => {
+});
+
+test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
   const calendarStart = html.indexOf('<div class="page" id="calendarPage"');
@@ -750,7 +756,9 @@ test("study room contains active celestial motion and a reduced-motion fallback"
   assert.ok(css.includes("@keyframes room-butterfly-flight"));
   assert.ok(css.includes("@media(prefers-reduced-motion:reduce)"));
   assert.ok(css.includes("cosmic-motion .wind-ribbons"));
-});test("hourglass countdown is isolated from the main application entry point", async () => {
+});
+
+test("hourglass countdown is isolated from the main application entry point", async () => {
   const main = await read("../src/main.js");
   const hourglass = await read("../src/features/hourglass.js");
   assert.ok(main.includes("import { mountHourglass } from './features/hourglass.js'"));
