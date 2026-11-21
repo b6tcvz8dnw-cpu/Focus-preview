@@ -1235,6 +1235,29 @@ test("study stats store adds sessions and keeps aggregate totals consistent afte
   assert.equal(reloaded.getState().minutes, 25);
 });
 
+test("study stats store keeps its previous in-memory state when persistence fails", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  const before = h.store.getState();
+  const rawBefore = h.storage.getText("focus-stats");
+  const changesBefore = h.changes.length;
+  const originalSetJSON = h.storage.setJSON.bind(h.storage);
+  h.storage.setJSON = (key, value) => key === "focus-stats" ? false : originalSetJSON(key, value);
+
+  assert.equal(h.store.addSession({
+    id: "not-saved", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: ""
+  }), false);
+  assert.deepEqual(h.store.getState(), before);
+  assert.equal(h.storage.getText("focus-stats"), rawBefore);
+  assert.equal(h.changes.length, changesBefore);
+
+  h.storage.setJSON = originalSetJSON;
+  assert.equal(h.store.addSession({
+    id: "saved-after-retry", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: ""
+  }), true);
+  assert.equal(h.store.getState().records[0].id, "saved-after-retry");
+});
+
 test("study stats store edits notes and durations, and deletes records without mutating old snapshots", () => {
   const h = createStatsHarness();
   h.store.load();
