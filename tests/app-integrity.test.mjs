@@ -1600,11 +1600,16 @@ test("study views render calendar dates and escape reflection text in history", 
   assert.match(h.elements.get("calendarGrid").innerHTML, /aria-current="date"/);
   assert.match(h.elements.get("calendarGrid").innerHTML, /aria-hidden="true"/);
   h.views.renderHistory({
-    records: [{ id: "safe-id", timestamp: 1795219200000, minutes: 25, note: "<script>alert(1)</script>" }]
+    records: [
+      { id: "safe-id", timestamp: 1795219200000, minutes: 25, note: "<script>alert(1)</script>" },
+      { id: '"><img src=x onerror=alert(1)>', timestamp: 1795219100000, minutes: 20, note: '<img src=x onerror="alert(2)">' }
+    ]
   });
   const html = h.elements.get("historyList").innerHTML;
   assert.match(html, /&lt;script&gt;/);
-  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.match(html, /&lt;img src=x onerror=&quot;alert\(2\)&quot;&gt;/);
+  assert.doesNotMatch(html, /<script>|<img/);
   assert.match(html, /data-record-edit="safe-id"/);
 });
 
