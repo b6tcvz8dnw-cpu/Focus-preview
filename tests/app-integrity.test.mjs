@@ -180,12 +180,13 @@ test("existing local storage keys are preserved", async () => {
   const timerController = await read("../src/features/timer-controller.js");
   const notificationController = await read("../src/features/notification-controller.js");
   const appearanceController = await read("../src/features/appearance-controller.js");
+  const recoveryController = await read("../src/features/recovery-controller.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok((script + transactions + statsStore + timerController + notificationController + appearanceController).includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions + statsStore + timerController + notificationController + appearanceController + recoveryController).includes(key), "missing storage key: " + key);
   }
 });
 
