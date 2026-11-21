@@ -79,6 +79,16 @@ test("applying timer settings warns before resetting an active session", async (
   assert.ok(handler.includes("現在のセッションは最初から"));
 });
 
+test("timer and textless-room preferences are applied only after storage succeeds", async () => {
+  const script = await read("../src/main.js");
+  const timerHandler = script.slice(script.indexOf("$('apply').onclick"), script.indexOf("document.querySelectorAll('[data-page]')"));
+  assert.ok(timerHandler.indexOf("storage.setJSON('focus-timer-settings',vals)") < timerHandler.indexOf("timerController.setDurations("));
+  assert.ok(timerHandler.includes("タイマー設定を保存できなかった"));
+  const quietHandler = script.slice(script.indexOf("$('roomTextToggle').addEventListener"), script.indexOf("window.addEventListener('pagehide'"));
+  assert.ok(quietHandler.indexOf("storage.setText('focus-room-quiet-text'") < quietHandler.indexOf("view.classList.toggle('room-quiet-text'"));
+  assert.ok(quietHandler.includes("表示設定を保存できなかった"));
+});
+
 test("interactive controls have visible keyboard focus and comfortable touch targets", async () => {
   const css = await readStyles();
   assert.ok(css.includes(":focus-visible"));
