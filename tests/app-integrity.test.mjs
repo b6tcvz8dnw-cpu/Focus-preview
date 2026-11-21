@@ -135,7 +135,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v10"));
+  assert.ok(sw.includes("focus-preview-pwa-v12"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -214,7 +214,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("app refreshes deadline-based timers after a back-forward cache restore", async () => {
   const script = await read("../src/main.js");
   assert.ok(script.includes("function refreshAfterReturn()"));
-  assert.ok(script.includes("document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterReturn()})"));
+  assert.ok(script.includes("document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('app-document-hidden',document.hidden);if(!document.hidden)refreshAfterReturn()})"));
   assert.ok(script.includes("window.addEventListener('pageshow',event=>{if(event.persisted)refreshAfterReturn()})"));
   assert.ok(script.includes("if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()"));
 });
