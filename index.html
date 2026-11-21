@@ -254,7 +254,8 @@ textarea.field-select{font-family:inherit;resize:vertical;min-height:80px}
 .hourglass-controls{display:flex;justify-content:center;gap:8px}
 .hourglass-controls button{min-width:94px}
 .hourglass-foot{font-size:10px;color:var(--muted);margin:12px 0 0}
-@keyframes sand-stream{from{opacity:.35}to{opacity:1}}
+@keyframes sand-flow{to{stroke-dashoffset:-16}}
+@keyframes sand-grain-fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(20px);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hourglass-art.is-running .hourglass-stream{animation:none;opacity:.7}}
 
 /* A wider, immersive study nook with a desk by the window */
