@@ -1,4 +1,11 @@
 // Coordinates validated backup import and protects the complete pre-import state.
+export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
+
+function isOversizedText(value) {
+  if (typeof value !== "string" || value.length > MAX_BACKUP_BYTES) return true;
+  try { return new TextEncoder().encode(value).byteLength > MAX_BACKUP_BYTES; }
+  catch { return true; }
+}
 export function createBackupImportController({
   input,
   storage,
@@ -23,6 +30,10 @@ export function createBackupImportController({
   }
 
   async function importText(text) {
+    if (isOversizedText(text)) {
+      onMessage("バックアップが大きすぎるため読み込みを中止したよ（上限10 MiB）。");
+      return { ok: false, stage: "size" };
+    }
     let parsed;
     try {
       parsed = JSON.parse(text);
@@ -85,6 +96,11 @@ export function createBackupImportController({
   async function handleChange(event) {
     const file = event?.target?.files?.[0];
     if (!file) return { ok: false, stage: "empty" };
+    if (Number.isFinite(file.size) && file.size > MAX_BACKUP_BYTES) {
+      onMessage("バックアップが大きすぎるため読み込みを中止したよ（上限10 MiB）。");
+      if (event?.target) event.target.value = "";
+      return { ok: false, stage: "size" };
+    }
     try {
       return await importText(await file.text());
     } catch {
