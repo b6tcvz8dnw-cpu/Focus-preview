@@ -287,3 +287,10 @@ Phase 7でも、端末間同期・アカウント機能・強制的な利用制�
 - [x] 復帰時は残り時間を再計算してからスケジューラーを再開
 - [x] 書斎の日付・時刻更新は書斎ページが表示されている場合だけ実行
 - [x] 回帰テストを追加し、Service Workerキャッシュをv13へ更新
+
+## Phase 7 — final page-exit teardown (in progress)
+- Added explicit destroy() cleanup to the hourglass controller: stops its interval, clears a pending long-press timeout, and removes click/keyboard/pointer/context-menu listeners.
+- Added final-page-exit cleanup for timer, hourglass, Study Room weather lifecycle, ambient audio, notifications, appearance, recovery, and backup import controllers.
+- pagehide first persists the timer runtime. When event.persisted is true, cleanup is intentionally skipped so Safari Back/Forward Cache restoration remains functional. The listener remains registered so a later non-persisted exit can still clean up.
+- Preview only. Awaiting CI and Pages deployment, followed by a focused iPhone Safari test for back/forward restoration and normal app close/reopen.
+
