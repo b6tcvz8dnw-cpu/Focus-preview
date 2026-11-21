@@ -279,7 +279,8 @@ test("storage adapter reads and writes text and JSON", () => {
   assert.equal(store.getText("theme"), "night");
   assert.equal(store.setJSON("settings", { focus: 25 }), true);
   assert.deepEqual(store.getJSON("settings"), { focus: 25 });
-  assert.equal(store.removeText("theme"), true);\n  assert.equal(store.getText("theme", null), null);
+  assert.equal(store.removeText("theme"), true);
+  assert.equal(store.getText("theme", null), null);
 });
 
 test("storage adapter supports a dedicated namespace without changing default keys", () => {
