@@ -11,6 +11,7 @@ import {
 import { createStorage } from "../src/data/storage.js";
 import { getRemainingSeconds, getNextBreakMode } from "../src/core/timer.js";
 import { calculateStats } from "../src/data/records.js";
+import { createStudyStatsStore } from "../src/data/stats-store.js";
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from "../src/data/schema.js";
 import { inspectRecoverySnapshots } from "../src/data/recovery.js";
 import { writeStatsWithBackup } from "../src/data/transactions.js";
@@ -170,13 +171,14 @@ test("timer lifecycle is owned by its feature module and Study Room remains sepa
 test("existing local storage keys are preserved", async () => {
   const script = await read("../src/main.js");
   const transactions = await read("../src/data/transactions.js");
+  const statsStore = await read("../src/data/stats-store.js");
   const timerController = await read("../src/features/timer-controller.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok((script + transactions + timerController).includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions + statsStore + timerController).includes(key), "missing storage key: " + key);
   }
 });
 
@@ -944,4 +946,137 @@ test("timer controller persists the current remaining time before page suspensio
   h.controller.persistCurrent();
   assert.equal(h.store.getJSON("focus-timer-runtime").remaining, 50);
   assert.equal(h.store.getJSON("focus-timer-runtime").running, true);
+});
+
+function createStatsHarness(initial = {}) {
+  const values = new Map(Object.entries(initial).map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)]));
+  const storage = {
+    getText: (key, fallback = null) => values.has(key) ? values.get(key) : fallback,
+    setText: (key, value) => { values.set(key, String(value)); return true; },
+    getJSON(key, fallback = null) {
+      const raw = this.getText(key, null);
+      if (raw === null) return fallback;
+      try { return JSON.parse(raw); } catch { return fallback; }
+    },
+    setJSON(key, value) { return this.setText(key, JSON.stringify(value)); }
+  };
+  const changes = [];
+  const store = createStudyStatsStore({ storage, onChange: (state, meta) => changes.push({ state, meta }) });
+  return { store, storage, values, changes };
+}
+
+test("study stats store migrates legacy data and protects the original snapshot", () => {
+  const legacy = {
+    completed: 3, minutes: 75,
+    history: { "2026-11-20": 75 },
+    records: [{ id: "s1", timestamp: 1795132800000, date: "2026-11-20", minutes: 25, note: "note" }],
+    dailyGoal: 90, weeklyGoal: 400
+  };
+  const h = createStatsHarness({ "focus-stats": legacy });
+  const loaded = h.store.load();
+  assert.equal(loaded.writeBlocked, false);
+  assert.equal(h.values.has("focus-pre-migration-backup"), true);
+  assert.deepEqual(h.store.getState().completed, 3);
+  assert.equal(h.store.getState().minutes, 75);
+  assert.equal(h.store.getState().records.length, 1);
+  assert.equal(h.store.getState().legacyCompleted, 2);
+  assert.equal(h.storage.getJSON("focus-stats").schemaVersion, CURRENT_DATA_SCHEMA_VERSION);
+});
+
+test("study stats store adds sessions and keeps aggregate totals consistent after reload", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  h.store.addSession({ id: "new-1", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" });
+  const current = h.store.getState();
+  assert.equal(current.completed, 1);
+  assert.equal(current.minutes, 25);
+  assert.equal(current.history["2026-11-21"], 25);
+  const reloaded = createStudyStatsStore({ storage: h.storage });
+  reloaded.load();
+  assert.equal(reloaded.getState().completed, 1);
+  assert.equal(reloaded.getState().minutes, 25);
+});
+
+test("study stats store edits notes and durations, and deletes records without mutating old snapshots", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  h.store.addSession({ id: "edit-1", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" });
+  const before = h.store.getState();
+  h.store.updateRecord("edit-1", { minutes: 40, note: "reflection" });
+  assert.equal(h.store.getState().minutes, 40);
+  assert.equal(h.store.getState().records[0].note, "reflection");
+  assert.equal(before.records[0].minutes, 25);
+  h.store.deleteRecord("edit-1");
+  assert.equal(h.store.getState().completed, 0);
+  assert.equal(h.store.getState().minutes, 0);
+});
+
+test("clearing a day's detailed records preserves lifetime totals but clears that day's chart", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  h.store.addSession({ id: "day-1", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" });
+  h.store.clearDayRecords("2026-11-21");
+  const state = h.store.getState();
+  assert.equal(state.records.length, 0);
+  assert.equal(state.completed, 1);
+  assert.equal(state.minutes, 25);
+  assert.equal(state.history["2026-11-21"], 0);
+  const restored = createStudyStatsStore({ storage: h.storage });
+  restored.load();
+  assert.equal(restored.getState().completed, 1);
+  assert.equal(restored.getState().minutes, 25);
+  assert.equal(restored.getState().history["2026-11-21"], 0);
+});
+
+test("future stats schemas remain untouched and block normal writes", () => {
+  const future = { schemaVersion: CURRENT_DATA_SCHEMA_VERSION + 1, custom: "preserve me" };
+  const h = createStatsHarness({ "focus-stats": future });
+  const loaded = h.store.load();
+  assert.equal(loaded.writeBlocked, true);
+  h.store.addSession({ id: "must-not-save", timestamp: 1795219200000, date: "2026-11-21", minutes: 25 });
+  assert.deepEqual(h.storage.getJSON("focus-stats"), future);
+  assert.equal(h.store.isWriteBlocked(), true);
+});
+
+test("failed migration backup blocks writes instead of overwriting unprotected data", () => {
+  const values = new Map([["focus-stats", JSON.stringify({ completed: 2, minutes: 50, records: [] })]]);
+  const storage = {
+    getText: (key, fallback = null) => values.has(key) ? values.get(key) : fallback,
+    setText: (key, value) => key === "focus-pre-migration-backup" ? false : (values.set(key, String(value)), true),
+    getJSON(key, fallback = null) { try { return JSON.parse(this.getText(key, null)) } catch { return fallback } },
+    setJSON(key, value) { return this.setText(key, JSON.stringify(value)); }
+  };
+  const store = createStudyStatsStore({ storage });
+  const loaded = store.load();
+  assert.equal(loaded.writeBlocked, true);
+  assert.equal(storage.getJSON("focus-stats").schemaVersion, undefined);
+});
+
+test("stats replacement is transactional and only publishes after successful persistence", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  const before = h.store.getState();
+  const result = h.store.replaceStats({
+    records: [{ id: "replace-1", timestamp: 1795219200000, date: "2026-11-21", minutes: 30 }],
+    legacyCompleted: 1, legacyMinutes: 10, legacyHistory: {}, dailyGoal: 100, weeklyGoal: 500
+  }, { backupKey: "focus-preimport-backup", backupPayload: { app: "FOCUS", version: 3 } });
+  assert.equal(result.ok, true);
+  assert.equal(h.store.getState().completed, 2);
+  assert.equal(h.store.getState().minutes, 40);
+  assert.equal(h.values.has("focus-preimport-backup"), true);
+  assert.equal(before.completed, 0);
+
+  const failValues = new Map();
+  const failStorage = {
+    getText: (key, fallback = null) => failValues.has(key) ? failValues.get(key) : fallback,
+    setText: (key, value) => key === "focus-preimport-backup" ? false : (failValues.set(key, String(value)), true),
+    getJSON(key, fallback = null) { try { return JSON.parse(this.getText(key, null)) } catch { return fallback } },
+    setJSON(key, value) { return this.setText(key, JSON.stringify(value)); }
+  };
+  const failed = createStudyStatsStore({ storage: failStorage });
+  failed.load();
+  const prior = failed.getState();
+  const rejected = failed.replaceStats({ records: [] }, { backupKey: "focus-preimport-backup", backupPayload: {} });
+  assert.deepEqual(rejected, { ok: false, stage: "backup" });
+  assert.equal(failed.getState().completed, prior.completed);
 });
