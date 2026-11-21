@@ -116,6 +116,8 @@ const ambientSound = createAmbientSoundController({
  root: document,
  getAudioContextConstructor: () => window.AudioContext || window.webkitAudioContext,
  getVolume: () => Number($('soundVolume').value) / 100,
+ getExistingAudioContext: () => audioContext,
+ onContextCreated: context => { audioContext = context; },
  onUnsupported: () => { $('toast').textContent='このブラウザでは環境音を再生できないようだよ。'; }
 });
 document.querySelectorAll('[data-sound]').forEach(b=>b.onclick=()=>ambientSound.toggle(b.dataset.sound));
