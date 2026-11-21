@@ -13,6 +13,7 @@ import { getRemainingSeconds, getNextBreakMode } from "../src/core/timer.js";
 import { calculateStats } from "../src/data/records.js";
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from "../src/data/schema.js";
 import { inspectRecoverySnapshots } from "../src/data/recovery.js";
+import { writeStatsWithBackup } from "../src/data/transactions.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -555,4 +556,52 @@ test("recovery exposes malformed live stats as export-only raw data", () => {
   assert.equal(item.restorable, false);
   assert.equal(item.rawText, malformed);
   assert.match(item.status, /正常に解析できません/);
+});
+
+
+test("stats replacement requires a pre-import backup before writing new data", () => {
+  const values = new Map([["focus-stats", JSON.stringify({ completed: 7 })]]);
+  const store = {
+    setJSON: (key, value) => { values.set(key, JSON.stringify(value)); return true; }
+  };
+  const result = writeStatsWithBackup(store, {
+    backupPayload: { app: "FOCUS", version: 3 },
+    statsPayload: { completed: 2 }
+  });
+  assert.deepEqual(result, { ok: true, stage: "complete" });
+  assert.deepEqual(JSON.parse(values.get("focus-preimport-backup")), { app: "FOCUS", version: 3 });
+  assert.deepEqual(JSON.parse(values.get("focus-stats")), { completed: 2 });
+});
+
+test("stats replacement aborts when the pre-import backup cannot be written", () => {
+  const original = JSON.stringify({ completed: 7 });
+  const values = new Map([["focus-stats", original]]);
+  const store = {
+    setJSON: (key, value) => {
+      if (key === "focus-preimport-backup") return false;
+      values.set(key, JSON.stringify(value)); return true;
+    }
+  };
+  const result = writeStatsWithBackup(store, {
+    backupPayload: { app: "FOCUS" }, statsPayload: { completed: 2 }
+  });
+  assert.deepEqual(result, { ok: false, stage: "backup" });
+  assert.equal(values.get("focus-stats"), original);
+});
+
+test("stats replacement keeps the pre-import backup and old stats when the new write fails", () => {
+  const original = JSON.stringify({ completed: 7 });
+  const values = new Map([["focus-stats", original]]);
+  const store = {
+    setJSON: (key, value) => {
+      if (key === "focus-stats") return false;
+      values.set(key, JSON.stringify(value)); return true;
+    }
+  };
+  const result = writeStatsWithBackup(store, {
+    backupPayload: { app: "FOCUS", version: 3 }, statsPayload: { completed: 2 }
+  });
+  assert.deepEqual(result, { ok: false, stage: "stats" });
+  assert.equal(values.get("focus-stats"), original);
+  assert.deepEqual(JSON.parse(values.get("focus-preimport-backup")), { app: "FOCUS", version: 3 });
 });
