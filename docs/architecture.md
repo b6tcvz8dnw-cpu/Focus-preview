@@ -26,7 +26,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト52項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト57項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -155,3 +155,12 @@
 - Focus timer and Study Room hourglass intervals now update once per second, matching the displayed MM:SS precision; both continue to derive remaining time from absolute deadlines.
 - Latest quality workflow: 52/52 tests passed; production build succeeded. Preview Pages deployment succeeded for commit `f518903118a35cc746d3a09552f2016accdf7d69`.
 - Manual iPhone validation of the new reduced-motion, keyboard focus, and touch-target changes remains outstanding.
+
+
+## Study Room interaction and animation audit — 2026-11-21
+
+- Found a state-refresh bug in `updateStudyRoom()`: assigning `view.className` replaced the entire Study Room class list every minute, removing the structural `little-planet-view` class and other UI state. The refresh now updates only the date-dependent `season-*` and `time-*` classes.
+- Raised the hourglass shelf above decorative scene layers and explicitly enabled touch interaction with `pointer-events:auto` and `touch-action:manipulation`.
+- Bumped the preview Service Worker cache to `focus-preview-pwa-v3` so the repaired HTML, CSS, and JS are fetched as a fresh cache generation.
+- Added regression coverage for structural class preservation, touch interaction layering, celestial animation definitions, and the reduced-motion fallback.
+- Automated verification and a fresh iPhone retest are required before continuing the next development phase. Production remains unchanged.
