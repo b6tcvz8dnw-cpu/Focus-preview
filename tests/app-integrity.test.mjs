@@ -1059,7 +1059,43 @@ test("hourglass scheduler is suspended while hidden and resumed from its deadlin
   assert.ok(source.includes("function setVisible(visible)"));
   assert.ok(source.includes("tick();"));
   assert.ok(source.includes("scheduleTick();"));
-  assert.ok(source.includes("return { tick, reset, setVisible, getState:"));
+  assert.ok(source.includes("tick, reset, setVisible,"));
+});
+
+test("hourglass destroy removes input handlers and clears its scheduler", () => {
+  const elements = new Map(), handlers = new Map(), removed = [];
+  const button = {
+    addEventListener(type, handler) { handlers.set(type, handler); },
+    removeEventListener(type, handler) { removed.push([type, handler]); },
+    setAttribute() {}
+  };
+  const art = { classList: { toggle() {} } };
+  for (const id of ["hourglassStart", "hourglassTime", "hourglassArt", "hourglassState", "hourglassSandTop", "hourglassSandBottom"]) {
+    elements.set(id, id === "hourglassStart" ? button : id === "hourglassArt" ? art : { style: {}, setAttribute() {} });
+  }
+  const priorWindow = globalThis.window;
+  globalThis.window = { setInterval: () => 7, clearInterval() {}, setTimeout: () => 8, clearTimeout() {} };
+  try {
+    const controller = mountHourglass({ getRemainingSeconds: () => 300, root: { getElementById: id => elements.get(id) } });
+    handlers.get("click")();
+    assert.equal(controller.getState().running, true);
+    controller.destroy();
+    assert.equal(controller.getState().running, false);
+    assert.equal(removed.length, 6);
+    controller.destroy();
+    assert.equal(removed.length, 6);
+  } finally {
+    globalThis.window = priorWindow;
+  }
+});
+
+test("final page exit disposes controllers but BFCache restoration keeps them alive", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("if(event.persisted||appDisposed)return;"));
+  for (const controller of ["timerController", "hourglass", "studyRoom", "ambientSound", "notificationController", "appearanceController", "recoveryController", "importController"]) {
+    assert.ok(script.includes(controller + ".destroy();"), "missing teardown for " + controller);
+  }
+  assert.ok(script.includes("timerController.persistCurrent();"));
 });
 
 test("hourglass supports keyboard reset and announces the reset instruction", async () => {
@@ -1123,7 +1159,7 @@ test("hourglass countdown is isolated from the main application entry point", as
   assert.ok(main.includes("const hourglass = mountHourglass({ getRemainingSeconds })"));
   assert.doesNotMatch(main, /function (start|stop|tick|reset)Hourglass/);
   assert.ok(hourglass.includes("export function mountHourglass"));
-  assert.ok(hourglass.includes("return { tick, reset, setVisible, getState:"));
+  assert.ok(hourglass.includes("tick, reset, setVisible,"));
 });
 
 
