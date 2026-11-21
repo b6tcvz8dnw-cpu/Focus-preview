@@ -8,6 +8,7 @@ import { mountHourglass } from './features/hourglass.js';
 import { createTimerController } from './features/timer-controller.js';
 import { mountStudyRoom } from './features/study-room.js';
 import { createStudyViews } from './views/study-views.js';
+import { createAmbientSoundController } from './features/ambient-sound.js';
 const $=id=>document.getElementById(id);
 const studyViews=createStudyViews();
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],dailyGoal=60,weeklyGoal=300,statsStore=null,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false,timerController=null;
@@ -111,13 +112,16 @@ $('saveReflection').onclick=saveReflection;
 $('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();statsStore.clearDayRecords(dateKey(new Date()));$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
 
 
-const ambientLayers={};
-function stopAmbient(){Object.values(ambientLayers).forEach(layer=>{try{layer.gain.gain.setTargetAtTime(0,audioContext.currentTime,.12);layer.source.stop(audioContext.currentTime+.5)}catch(e){}});Object.keys(ambientLayers).forEach(k=>delete ambientLayers[k]);document.querySelectorAll('[data-sound]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false')});document.querySelectorAll('[data-sound-preset]').forEach(b=>b.classList.remove('selected'))}
-function setAmbientLayer(kind,on){if(on&&ambientLayers[kind])return;if(!on&&ambientLayers[kind]){const layer=ambientLayers[kind];try{layer.gain.gain.setTargetAtTime(0,audioContext.currentTime,.12);layer.source.stop(audioContext.currentTime+.5)}catch(e){}delete ambientLayers[kind]}else if(on){const AC=window.AudioContext||window.webkitAudioContext;if(!AC){$('toast').textContent='このブラウザでは環境音を再生できないようだよ。';return}audioContext=audioContext||new AC();audioContext.resume();const size=audioContext.sampleRate*4,buffer=audioContext.createBuffer(1,size,audioContext.sampleRate),data=buffer.getChannelData(0);let last=0;for(let i=0;i<size;i++){const white=Math.random()*2-1;if(kind==='wind'){last=.985*last+.015*white;data[i]=last*3}else if(kind==='rain')data[i]=white*.34;else data[i]=white*.16}const source=audioContext.createBufferSource();source.buffer=buffer;source.loop=true;const filter=audioContext.createBiquadFilter();filter.type=kind==='rain'?'lowpass':kind==='wind'?'lowpass':'bandpass';filter.frequency.value=kind==='rain'?1100:kind==='wind'?380:520;const gain=audioContext.createGain();gain.gain.value=Number($('soundVolume').value)/100/Math.max(1,Object.keys(ambientLayers).length+1);source.connect(filter);filter.connect(gain);gain.connect(audioContext.destination);source.start();ambientLayers[kind]={source,gain}}const button=document.querySelector('[data-sound="'+kind+'"]');if(button){button.classList.toggle('selected',!!ambientLayers[kind]);button.setAttribute('aria-pressed',String(!!ambientLayers[kind]))}}
-function startAmbient(kind){if(kind==='off'){stopAmbient();return}setAmbientLayer(kind,!ambientLayers[kind]);document.querySelectorAll('[data-sound-preset]').forEach(b=>b.classList.remove('selected'))}
-document.querySelectorAll('[data-sound]').forEach(b=>b.onclick=()=>startAmbient(b.dataset.sound));
-document.querySelectorAll('[data-sound-preset]').forEach(b=>b.onclick=()=>{stopAmbient();const presets={rainy:['rain','noise'],breeze:['wind'],quiet:['noise'],off:[]};(presets[b.dataset.soundPreset]||[]).forEach(k=>setAmbientLayer(k,true));b.classList.add('selected')});
-$('soundVolume').oninput=()=>{const layers=Object.values(ambientLayers),gain=Number($('soundVolume').value)/100/Math.max(1,layers.length);layers.forEach(layer=>layer.gain.gain.setTargetAtTime(gain,audioContext.currentTime,.08))};
+const ambientSound = createAmbientSoundController({
+ root: document,
+ getAudioContextConstructor: () => window.AudioContext || window.webkitAudioContext,
+ getVolume: () => Number($('soundVolume').value) / 100,
+ onUnsupported: () => { $('toast').textContent='このブラウザでは環境音を再生できないようだよ。'; }
+});
+document.querySelectorAll('[data-sound]').forEach(b=>b.onclick=()=>ambientSound.toggle(b.dataset.sound));
+document.querySelectorAll('[data-sound-preset]').forEach(b=>b.onclick=()=>ambientSound.setPreset(b.dataset.soundPreset));
+$('soundVolume').oninput=()=>ambientSound.setVolume(Number($('soundVolume').value)/100);
+window.addEventListener('pagehide',()=>ambientSound.stop());
 function buildBackupPayload(){return {app:'FOCUS',version:CURRENT_BACKUP_VERSION,exportedAt:new Date().toISOString(),stats:statsStore.exportStats(),timerSettings:normalizeTimerSettings(storage.getJSON('focus-timer-settings',null)),appearance:storage.getJSON('focus-appearance',null),mark:storage.getText('focus-mark')||'dot',notificationsEnabled,quietText:storage.getText('focus-room-quiet-text')==='true'}}
 function downloadBackup(payload,filename){const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('exportData').onclick=()=>{downloadBackup(buildBackupPayload(),'focus-backup-'+dateKey(new Date())+'.json');$('toast').textContent='バックアップを書き出したよ。'};
