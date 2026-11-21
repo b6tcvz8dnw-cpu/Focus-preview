@@ -164,3 +164,12 @@
 - Bumped the preview Service Worker cache to `focus-preview-pwa-v3` so the repaired HTML, CSS, and JS are fetched as a fresh cache generation.
 - Added regression coverage for structural class preservation, touch interaction layering, celestial animation definitions, and the reduced-motion fallback.
 - Automated verification and a fresh iPhone retest are required before continuing the next development phase. Production remains unchanged.
+
+
+## Hourglass module extraction — 2026-11-21
+
+- Extracted the hourglass countdown state, rendering, tap/pause, long-press reset, and one-second tick into `src/features/hourglass.js`.
+- The main entry point now mounts the controller and only calls its public `tick()` method when the document becomes visible again.
+- The module exposes a small state snapshot for future focused tests; the main Pomodoro timer and Study Room presentation remain unchanged.
+- Regression tests verify the controller wiring and confirm that hourglass implementation details no longer live in `src/main.js`.
+- This is the first incremental step of the Study Room/hourglass separation. Weather and scene presentation remain in the main entry point for a later extraction.
