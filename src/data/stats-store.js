@@ -61,16 +61,19 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
     onChange(snapshot(), { writeBlocked });
   }
 
-  function persist() {
+  function persist(next = state) {
     if (writeBlocked) return false;
-    return storage.setJSON("focus-stats", serialize());
+    return storage.setJSON("focus-stats", serialize(next));
   }
 
   function commit(next, { save = true } = {}) {
-    state = buildState(next);
-    const saved = save ? persist() : true;
+    const candidate = buildState(next);
+    // Persist the candidate before publishing it. A failed write must not
+    // leave the in-memory view ahead of the durable local record.
+    if (save && !persist(candidate)) return false;
+    state = candidate;
     emit();
-    return saved;
+    return true;
   }
 
   function load() {
