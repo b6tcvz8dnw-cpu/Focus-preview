@@ -6,7 +6,7 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
   const button = $('hourglassStart');
   if (!button) throw new Error('hourglassStart button was not found');
   let duration = 300, remaining = 300, deadline = 0, interval = null;
-  let running = false, pressTimer = null, longPressed = false;
+  let running = false, pressTimer = null, longPressed = false, pageVisible = true;
   function render() {
     const seconds = Math.max(0, remaining);
     $('hourglassTime').textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
@@ -17,6 +17,9 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
     $('hourglassSandTop').style.transform = 'scaleY(' + Math.max(0, fraction) + ')';
     $('hourglassSandBottom').style.transform = 'scaleY(' + Math.max(0, 1 - fraction) + ')';
     $('hourglassTime').setAttribute('aria-label', '残り ' + Math.floor(seconds / 60) + ' 分 ' + (seconds % 60) + ' 秒');
+  }
+  function scheduleTick() {
+    if (pageVisible && running && interval === null) interval = window.setInterval(tick, 1000);
   }
   function stop() {
     if (interval !== null) { clearInterval(interval); interval = null; }
@@ -33,8 +36,19 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
     deadline = Date.now() + remaining * 1000;
     running = true;
     if (interval !== null) clearInterval(interval);
-    interval = window.setInterval(tick, 1000);
+    interval = null;
+    scheduleTick();
     render();
+  }
+  function setVisible(visible) {
+    pageVisible = !!visible;
+    if (!pageVisible) {
+      tick();
+      if (interval !== null) { clearInterval(interval); interval = null; }
+      return;
+    }
+    tick();
+    scheduleTick();
   }
   function reset() {
     stop(); duration = 300; remaining = duration; deadline = 0; render();
@@ -64,5 +78,5 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
   });
   button.addEventListener('contextmenu', event => event.preventDefault());
   render();
-  return { tick, reset, getState: () => ({ duration, remaining, running, deadline }) };
+  return { tick, reset, setVisible, getState: () => ({ duration, remaining, running, deadline }) };
 }
