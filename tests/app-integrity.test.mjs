@@ -714,8 +714,12 @@ test("study room hourglass remains above decorative layers and accepts touch inp
   const main = await read("../src/main.js");
   assert.match(html, /\.planet-hourglass\{[^}]*z-index:30;pointer-events:auto;touch-action:manipulation/s);
   assert.match(html, /\.desk-hourglass\{[^}]*pointer-events:auto;touch-action:manipulation/s);
-  assert.match(main, /hourglassButton\.addEventListener\('click'/);
-  assert.match(main, /hourglassButton\.addEventListener\('pointerdown'/);
+  const hourglass = await read("../src/features/hourglass.js");
+  assert.match(main, /mountHourglass\(\{ getRemainingSeconds \}\)/);
+  assert.match(hourglass, /button\.addEventListener\('click'/);
+  assert.match(hourglass, /button\.addEventListener\('pointerdown'/);
+  assert.match(hourglass, /window\.setInterval\(tick, 1000\)/);
+  assert.match(hourglass, /getState: \(\) => \(\{ duration, remaining, running, deadline \}\)/);
 });
 
 test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
@@ -735,4 +739,15 @@ test("study room contains active celestial motion and a reduced-motion fallback"
   assert.ok(html.includes("@keyframes room-butterfly-flight"));
   assert.ok(html.includes("@media(prefers-reduced-motion:reduce)"));
   assert.ok(html.includes("cosmic-motion .wind-ribbons"));
+});
+
+
+test("hourglass countdown is isolated from the main application entry point", async () => {
+  const main = await read("../src/main.js");
+  const hourglass = await read("../src/features/hourglass.js");
+  assert.ok(main.includes("import { mountHourglass } from './features/hourglass.js'"));
+  assert.ok(main.includes("const hourglass = mountHourglass({ getRemainingSeconds })"));
+  assert.doesNotMatch(main, /function (start|stop|tick|reset)Hourglass/);
+  assert.ok(hourglass.includes("export function mountHourglass"));
+  assert.ok(hourglass.includes("return { tick, reset, getState:"));
 });
