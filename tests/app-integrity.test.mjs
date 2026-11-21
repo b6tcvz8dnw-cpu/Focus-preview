@@ -219,6 +219,13 @@ test("app refreshes deadline-based timers after a back-forward cache restore", a
   assert.ok(script.includes("if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()"));
 });
 
+test("decorative CSS animations pause while the document is backgrounded", async () => {
+  const script = await read("../src/main.js");
+  const styles = await readStyles();
+  assert.ok(script.includes("document.body.classList.toggle('app-document-hidden',document.hidden)"));
+  assert.match(styles, /body\.app-document-hidden \*\{animation-play-state:paused!important\}/);
+});
+
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
