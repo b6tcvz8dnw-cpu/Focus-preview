@@ -45,6 +45,26 @@ test("main document has a valid Japanese HTML shell", async () => {
   assert.ok(html.includes("<title>FOCUS"));
 });
 
+test("document CSP limits scripts, network access, and embedded objects", async () => {
+  const html = await read("../index.html");
+  const match = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/);
+  assert.ok(match, "CSP meta policy is required");
+  const policy = match[1];
+  for (const directive of [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "connect-src 'self' https://api.open-meteo.com",
+    "worker-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ]) assert.ok(policy.includes(directive), "missing CSP directive: " + directive);
+  assert.doesNotMatch(policy, /script-src[^;]*unsafe-inline/);
+  assert.doesNotMatch(html, /<script(?![^>]*\\bsrc=)[^>]*>/i, "inline scripts are not allowed");
+  assert.doesNotMatch(html, /\\son[a-z]+\\s*=/i, "inline event handlers are not allowed");
+});
+
 test("all HTML IDs are unique", async () => {
   const html = await read("../index.html");
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
