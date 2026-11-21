@@ -211,6 +211,14 @@ test("PWA manifest remains valid and standalone-capable", async () => {
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
 });
 
+test("app refreshes deadline-based timers after a back-forward cache restore", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("function refreshAfterReturn()"));
+  assert.ok(script.includes("document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterReturn()})"));
+  assert.ok(script.includes("window.addEventListener('pageshow',event=>{if(event.persisted)refreshAfterReturn()})"));
+  assert.ok(script.includes("if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()"));
+});
+
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
