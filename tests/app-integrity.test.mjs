@@ -19,6 +19,7 @@ import { writeStatsWithBackup } from "../src/data/transactions.js";
 import { createTimerController } from "../src/features/timer-controller.js";
 import { createAmbientSoundController } from "../src/features/ambient-sound.js";
 import { createNotificationController } from "../src/features/notification-controller.js";
+import { createAppearanceController } from "../src/features/appearance-controller.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -177,12 +178,13 @@ test("existing local storage keys are preserved", async () => {
   const statsStore = await read("../src/data/stats-store.js");
   const timerController = await read("../src/features/timer-controller.js");
   const notificationController = await read("../src/features/notification-controller.js");
+  const appearanceController = await read("../src/features/appearance-controller.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok((script + transactions + statsStore + timerController + notificationController).includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions + statsStore + timerController + notificationController + appearanceController).includes(key), "missing storage key: " + key);
   }
 });
 
@@ -1340,4 +1342,105 @@ test("main delegates notification settings, delivery, and backup restoration", a
   assert.ok(script.includes("notificationController.setEnabled(obj.notificationsEnabled)"));
   assert.doesNotMatch(script, /new Notification\(/);
   assert.doesNotMatch(script, /updateNotificationButton/);
+});
+
+
+function makeAppearanceFixture(saved = {}) {
+  const values = new Map(Object.entries(saved));
+  const makeButton = (value, attribute) => {
+    const handlers = new Map();
+    const classes = new Set();
+    return {
+      dataset: { [attribute]: value },
+      classList: { toggle(name, force) { if (force) classes.add(name); else classes.delete(name); } },
+      attributes: {},
+      addEventListener(type, fn) { handlers.set(type, fn); },
+      removeEventListener(type, fn) { if (handlers.get(type) === fn) handlers.delete(type); },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      click() { handlers.get("click")?.(); },
+      get selected() { return classes.has("selected"); },
+      get listenerCount() { return handlers.size; }
+    };
+  };
+  const themes = ["green", "blue", "purple", "amber", "rose"].map(value => makeButton(value, "theme"));
+  const marks = ["dot", "star", "leaf"].map(value => makeButton(value, "mark"));
+  const css = new Map();
+  const brand = { textContent: "●" };
+  const meta = { attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } };
+  const root = {
+    documentElement: { style: { setProperty(name, value) { css.set(name, value); } } },
+    querySelectorAll(selector) { return selector === "[data-theme]" ? themes : selector === "[data-mark]" ? marks : []; },
+    querySelector(selector) { return selector === 'meta[name="theme-color"]' ? meta : null; },
+    getElementById(id) { return id === "brandMark" ? brand : null; }
+  };
+  const storage = {
+    getText(key, fallback = null) { return values.has(key) ? values.get(key) : fallback; },
+    setText(key, value) { values.set(key, String(value)); return true; },
+    getJSON(key, fallback = null) { try { return values.has(key) ? JSON.parse(values.get(key)) : fallback; } catch { return fallback; } },
+    setJSON(key, value) { values.set(key, JSON.stringify(value)); return true; }
+  };
+  return { root, storage, values, themes, marks, css, brand, meta };
+}
+
+test("appearance controller restores the saved theme and mark without rewriting preferences", () => {
+  const fixture = makeAppearanceFixture({
+    "focus-appearance": JSON.stringify({ theme: "blue", mark: "leaf" }),
+    "focus-mark": "star"
+  });
+  const controller = createAppearanceController(fixture);
+  assert.deepEqual(controller.initialize(), { theme: "blue", mark: "star" });
+  assert.equal(fixture.css.get("--bg"), "#101923");
+  assert.equal(fixture.meta.attributes.content, "#101923");
+  assert.equal(fixture.brand.textContent, "✦");
+  assert.equal(fixture.themes.find(button => button.dataset.theme === "blue").selected, true);
+  assert.equal(fixture.marks.find(button => button.dataset.mark === "star").attributes["aria-pressed"], "true");
+  assert.equal(fixture.values.get("focus-appearance"), JSON.stringify({ theme: "blue", mark: "leaf" }));
+});
+
+test("appearance controller applies and persists theme and mark choices", () => {
+  const fixture = makeAppearanceFixture();
+  const controller = createAppearanceController(fixture);
+  controller.initialize();
+  fixture.themes.find(button => button.dataset.theme === "rose").click();
+  assert.deepEqual(controller.getState(), { theme: "rose", mark: "dot" });
+  assert.deepEqual(JSON.parse(fixture.values.get("focus-appearance")), { theme: "rose", mark: "dot" });
+  assert.equal(fixture.css.get("--accent"), "#e6a0ad");
+  fixture.marks.find(button => button.dataset.mark === "leaf").click();
+  assert.equal(fixture.brand.textContent, "❧");
+  assert.equal(fixture.values.get("focus-mark"), "leaf");
+  assert.equal(fixture.marks.find(button => button.dataset.mark === "leaf").attributes["aria-pressed"], "true");
+});
+
+test("appearance controller falls back safely for unknown or corrupt stored preferences", () => {
+  const fixture = makeAppearanceFixture({
+    "focus-appearance": "{broken",
+    "focus-mark": "unknown"
+  });
+  const controller = createAppearanceController(fixture);
+  assert.deepEqual(controller.initialize(), { theme: "green", mark: "dot" });
+  assert.equal(fixture.css.get("--bg"), "#101915");
+  assert.equal(fixture.brand.textContent, "●");
+  assert.equal(fixture.themes.find(button => button.dataset.theme === "green").selected, true);
+});
+
+test("appearance controller normalizes invalid runtime choices before saving", () => {
+  const fixture = makeAppearanceFixture();
+  const controller = createAppearanceController(fixture);
+  controller.initialize();
+  controller.setTheme("not-a-theme");
+  controller.setMark("not-a-mark");
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
+  assert.deepEqual(JSON.parse(fixture.values.get("focus-appearance")), { theme: "green", mark: "dot" });
+  assert.equal(fixture.values.get("focus-mark"), "dot");
+});
+
+test("appearance controller removes only its own button listeners on destroy", () => {
+  const fixture = makeAppearanceFixture();
+  const controller = createAppearanceController(fixture);
+  controller.initialize();
+  assert.equal(fixture.themes[0].listenerCount, 1);
+  assert.equal(fixture.marks[0].listenerCount, 1);
+  controller.destroy();
+  assert.equal(fixture.themes[0].listenerCount, 0);
+  assert.equal(fixture.marks[0].listenerCount, 0);
 });
