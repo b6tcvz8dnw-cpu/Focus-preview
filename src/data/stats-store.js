@@ -128,11 +128,11 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
     return commit({ ...state, records: [...state.records, { ...record }] });
   }
 
-  function updateRecord(id, minutes) {
+  function updateRecord(id, patch) {
     const index = state.records.findIndex((record) => record.id === id);
     if (index < 0) return false;
     const records = state.records.map((record, i) =>
-      i === index ? { ...record, minutes } : record
+      i === index ? { ...record, ...patch } : record
     );
     return commit({ ...state, records });
   }
