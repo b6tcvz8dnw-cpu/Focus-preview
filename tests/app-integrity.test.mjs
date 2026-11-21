@@ -1096,6 +1096,7 @@ test("final page exit disposes controllers but BFCache restoration keeps them al
     assert.ok(script.includes(controller + ".destroy();"), "missing teardown for " + controller);
   }
   assert.ok(script.includes("timerController.persistCurrent();"));
+  assert.ok(!script.includes("},{once:true});"), "pagehide handler must remain for a post-BFCache final exit");
 });
 
 test("hourglass supports keyboard reset and announces the reset instruction", async () => {
