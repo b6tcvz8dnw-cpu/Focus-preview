@@ -173,3 +173,11 @@
 - The module exposes a small state snapshot for future focused tests; the main Pomodoro timer and Study Room presentation remain unchanged.
 - Regression tests verify the controller wiring and confirm that hourglass implementation details no longer live in `src/main.js`.
 - This is the first incremental step of the Study Room/hourglass separation. Weather and scene presentation remain in the main entry point for a later extraction.
+
+
+## Study Room feature extraction — 2026-11-21
+
+- Moved season/time-of-day presentation, date and clock labels, sky refresh integration, Nagoya weather fetching/caching, weather-to-scene classes, and sun-position adjustment into `src/features/study-room.js`.
+- The main entry point now mounts the Study Room controller and calls its public update/load/visibility methods from page navigation and document visibility handling.
+- The existing Study Room markup, CSS, quiet-text setting, fullscreen control, and hourglass module remain separate and unchanged.
+- Added regression coverage for module boundaries and the timer/page/visibility integration.
