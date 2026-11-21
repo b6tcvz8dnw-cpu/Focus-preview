@@ -12,7 +12,7 @@
 - JavaScript: `src/main.js` と `src/core/`・`src/data/` のモジュールに分割開始
 - `index.html`: 約91 KB / 約1,330行（JavaScript本体を外部化）
 - インラインJavaScript: 約254行、約40個の関数
-- CSS: 1つのインライン `<style>`
+- CSS: `src/styles/main.css` から6つの責務別スタイルシートを順序付きで読み込む（インラインCSSなし）
 - Vite設定: `vite.config.js`（`base: './'`、`dist/`出力）
 - ビルドスクリプト: `scripts/build.mjs`（ハッシュ付きバンドルをService Workerへ注入）
 - PWAマニフェスト / Service Worker / SVGアイコン: `public/`
@@ -26,7 +26,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト62項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト63項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -187,3 +187,12 @@
 
 - The quiet-text mode continues to hide surrounding labels and information, but no longer hides the hourglass countdown digits.
 - Added a regression test ensuring the countdown remains visible while the hourglass label stays hidden.
+
+
+## CSS responsibility split — 2026-11-21
+
+- Extracted the former 71 KB inline stylesheet into six files under `src/styles/`: foundation, Study Room, app components, device layout, Study Room visuals, and accessibility.
+- Added `src/styles/main.css` as a single ordered entry point. The import order exactly follows the former inline stylesheet order to preserve the cascade and overrides.
+- The HTML now links the stylesheet through a Vite-relative path; no inline CSS remains. No selector, declaration, animation, or visual value was intentionally changed.
+- Updated regression tests to inspect the extracted stylesheets and added coverage for stylesheet ordering and absence of inline styles.
+- Automated validation and iPhone visual retest are required before any production integration.
