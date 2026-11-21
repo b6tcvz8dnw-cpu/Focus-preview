@@ -78,7 +78,7 @@ const appearanceController=createAppearanceController({root:document,storage});
 appearanceController.initialize();
 try{const ts=normalizeTimerSettings(storage.getJSON('focus-timer-settings',null));if(ts){durations={focus:ts.focus,short:ts.short,long:ts.long};$('focusDuration').value=ts.focus;$('shortDuration').value=ts.short;$('longDuration').value=ts.long;$('cycleDuration').value=ts.cycle;storage.setJSON('focus-timer-settings',ts)}}catch(e){}
 function syncTimerState(state){durations=state.durations;mode=state.mode;remaining=state.remaining;total=state.total;running=state.running;deadline=state.deadline;finished=state.finished;update()}
-timerController=createTimerController({durations,getCycleLength:cycle,getCompletedSessions:()=>completed,store:storage,onChange:syncTimerState,onFocusComplete(){const record={id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:durations.focus,note:''};statsStore.addSession(record);updateChart();notify('集中セッション完了！休憩を始めよう。');playCompletionSound();if(appReady){$('reflection').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}},onBreakComplete(){notify('休憩終了！お疲れさま。');playCompletionSound()}});
+timerController=createTimerController({durations,getCycleLength:cycle,getCompletedSessions:()=>completed,store:storage,onChange:syncTimerState,onFocusComplete(){const record={id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:durations.focus,note:''};const saved=statsStore.addSession(record);if(saved)updateChart();notify('集中セッション完了！休憩を始めよう。');if(!saved)$('toast').textContent='集中記録を保存できなかったよ。端末の空き容量を確認してね。';playCompletionSound();if(appReady){$('reflection').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}},onBreakComplete(){notify('休憩終了！お疲れさま。');playCompletionSound()}});
 ({durations,mode,remaining,total,running,deadline,finished}=timerController.getState());
 
 
@@ -94,22 +94,22 @@ const statsLoad=statsStore.load();if(statsLoad.message)$('toast').textContent=st
 timerController.restore();
 
 $('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;
-$('saveGoals').onclick=()=>{const d=Number($('dailyGoal').value),w=Number($('weeklyGoal').value);if(!Number.isInteger(d)||!Number.isInteger(w)||d<0||w<0||d>1440||w>10080){$('toast').textContent='目標は範囲内の整数で入力してね。';return}statsStore.setGoals(d,w);renderGoals();$('toast').textContent='目標を保存したよ。'};
+$('saveGoals').onclick=()=>{const d=Number($('dailyGoal').value),w=Number($('weeklyGoal').value);if(!Number.isInteger(d)||!Number.isInteger(w)||d<0||w<0||d>1440||w>10080){$('toast').textContent='目標は範囲内の整数で入力してね。';return}if(!statsStore.setGoals(d,w)){$('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;$('toast').textContent='目標を保存できなかったよ。端末の空き容量を確認してね。';return}renderGoals();$('toast').textContent='目標を保存したよ。'};
 function renderGoals(){studyViews.renderGoals({history,dailyGoal,weeklyGoal})}
 function renderCalendar(){studyViews.renderCalendar({history,cursor:calendarCursor})}
 $('monthPrev').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);renderCalendar()};
 $('monthNext').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);renderCalendar()};
 function renderHistory(){studyViews.renderHistory({records,query:$('historySearch')?.value||'',reflectionOnly:$('reflectionOnly')?.checked||false})}
-$('historyList').onclick=e=>{const del=e.target.closest('[data-record-delete]'),edit=e.target.closest('[data-record-edit]');if(del){const id=del.dataset.recordDelete,r=records.find(x=>x.id===id);if(!r||!confirm('この学習記録を削除する？'))return;statsStore.deleteRecord(id);renderAllRecords()}else if(edit){const r=records.find(x=>x.id===edit.dataset.recordEdit);if(!r)return;const n=Number(prompt('このセッションの集中時間（分）',String(r.minutes)));if(!Number.isInteger(n)||n<1||n>120)return;statsStore.updateRecord(r.id,{minutes:n});renderAllRecords()}};
+$('historyList').onclick=e=>{const del=e.target.closest('[data-record-delete]'),edit=e.target.closest('[data-record-edit]');if(del){const id=del.dataset.recordDelete,r=records.find(x=>x.id===id);if(!r||!confirm('この学習記録を削除する？'))return;if(!statsStore.deleteRecord(id)){$('toast').textContent='学習記録を削除できなかったよ。';return}renderAllRecords()}else if(edit){const r=records.find(x=>x.id===edit.dataset.recordEdit);if(!r)return;const n=Number(prompt('このセッションの集中時間（分）',String(r.minutes)));if(!Number.isInteger(n)||n<1||n>120)return;if(!statsStore.updateRecord(r.id,{minutes:n})){$('toast').textContent='学習記録を更新できなかったよ。';return}renderAllRecords()}};
 let analyticsRange='day';
 function renderAnalytics(){studyViews.renderAnalytics({history,range:analyticsRange})}
 document.querySelectorAll('[data-analytics-range]').forEach(b=>b.addEventListener('click',()=>{analyticsRange=b.dataset.analyticsRange;renderAnalytics()}));
 $('historySearch').addEventListener('input',renderHistory);$('reflectionOnly').addEventListener('change',renderHistory);
 function renderAllRecords(){update();updateChart();renderGoals();renderCalendar();renderHistory();renderAnalytics()}
-function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}statsStore.updateRecord(r.id,{note:$('reflection').value.trim()});renderHistory();$('toast').textContent='振り返りを保存したよ。'}
+function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}if(!statsStore.updateRecord(r.id,{note:$('reflection').value.trim()})){$('toast').textContent='振り返りを保存できなかったよ。';return}renderHistory();$('toast').textContent='振り返りを保存したよ。'}
 $('saveReflection').onclick=saveReflection;
 
-$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();statsStore.clearDayRecords(dateKey(new Date()));$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
+$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();if(!statsStore.clearDayRecords(dateKey(new Date()))) {$('toast').textContent='今日の記録を消去できなかったよ。';return}timerController.reset();$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
 
 
 const ambientSound = createAmbientSoundController({
