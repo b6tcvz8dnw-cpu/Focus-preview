@@ -294,3 +294,9 @@ Phase 7でも、端末間同期・アカウント機能・強制的な利用制�
 - pagehide first persists the timer runtime. When event.persisted is true, cleanup is intentionally skipped so Safari Back/Forward Cache restoration remains functional. The listener remains registered so a later non-persisted exit can still clean up.
 - Preview only. Awaiting CI and Pages deployment, followed by a focused iPhone Safari test for back/forward restoration and normal app close/reopen.
 
+## Phase 7 — Content Security Policy (in progress)
+- Added a document-level Content Security Policy: scripts are restricted to same-origin resources, network connections are limited to same-origin plus the Open-Meteo weather endpoint, workers/manifests are same-origin, and embedded objects are blocked.
+- Inline JavaScript is not permitted. Inline styles remain permitted because the current visual system uses style attributes and runtime CSS variables.
+- Added integrity tests for required policy directives and to reject inline script blocks and inline event-handler attributes.
+- Preview only; awaiting CI/build and deployment. Verify theme switching, timer controls, Study Room weather, and PWA install/launch after the policy is live.
+
