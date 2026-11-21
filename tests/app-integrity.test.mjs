@@ -104,7 +104,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(html.includes("\n.hourglass-grain{fill:var(--accent)"));
   assert.ok(html.includes("\n.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v2"));
+  assert.ok(sw.includes("focus-preview-pwa-v3"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
