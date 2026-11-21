@@ -43,6 +43,23 @@ test("essential pages and controls remain present", async () => {
   }
 });
 
+test("settings page provides a clear title and return path", async () => {
+  const html = await read("../index.html");
+  const start = html.indexOf('<div class="page" id="settingsPage"');
+  const end = html.indexOf('<nav class="tabbar"', start);
+  const settings = html.slice(start, end);
+  assert.ok(settings.includes("<h2") && settings.includes("設定"));
+  assert.ok(settings.includes('data-page="timerPage"'));
+});
+
+test("applying timer settings warns before resetting an active session", async () => {
+  const script = await read("../src/main.js");
+  const handler = script.slice(script.indexOf("$('apply').onclick"), script.indexOf("document.querySelectorAll('[data-page]')"));
+  assert.ok(handler.includes("(running||remaining!==total)"));
+  assert.ok(handler.includes("!confirm("));
+  assert.ok(handler.includes("現在のセッションは最初から"));
+});
+
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
