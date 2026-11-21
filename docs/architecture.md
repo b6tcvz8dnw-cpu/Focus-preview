@@ -27,7 +27,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト76項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト80項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -217,3 +217,13 @@
 - Kept the existing pure aggregation functions in `src/data/records.js`; the main entry point no longer calculates or mutates aggregate record state directly.
 - Added deterministic tests for legacy migration, aggregate consistency across reload, immutable snapshots, note/duration edits, deletion, clearing a day while preserving lifetime totals, future-schema protection, migration-backup failure, and transactional replacement.
 - Manual iPhone validation remains required, especially focus completion, record editing, daily clearing, backup import/export, and recovery UI.
+
+
+## Study presentation extraction — 2026-11-21
+
+- Added `src/views/study-views.js` for the DOM presentation of achievements, weekly summaries, goal progress, calendar, history, and analytics.
+- The view module receives records, aggregate history, goals, date cursor, and analytics range as inputs. It does not access storage or mutate learning data.
+- `src/main.js` retains application state and user interaction handlers, and delegates HTML rendering to the view module. Study Room sky progression remains coordinated by the app and is refreshed with the weekly view.
+- Reflection text and record IDs are escaped before being inserted into history markup.
+- Added tests for weekly totals, goals, calendar output, safe history rendering, analytics periods, and main/view integration.
+- Manual iPhone validation is still required for all affected pages and interactions.
