@@ -69,12 +69,13 @@ test("core timer and Study Room functions remain present", async () => {
 
 test("existing local storage keys are preserved", async () => {
   const script = await read("../src/main.js");
+  const transactions = await read("../src/data/transactions.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok(script.includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions).includes(key), "missing storage key: " + key);
   }
 });
 
