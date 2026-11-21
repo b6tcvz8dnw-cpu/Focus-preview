@@ -149,7 +149,7 @@ test("HTML loads the external application module and its source parses", async (
   assert.ok(script.includes("./core/date-time.js"), "date-time module should be imported");
   assert.ok(script.includes("./data/storage.js"), "storage module should be imported");
   assert.ok(script.includes("./core/timer.js"), "timer module should be imported");
-  assert.ok(script.includes("./data/records.js"), "record module should be imported");
+  assert.ok(script.includes("./data/stats-store.js"), "statistics store should be imported");
   assert.ok(!script.includes("localStorage."), "app should use the storage adapter");
 });
 
