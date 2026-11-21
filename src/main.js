@@ -171,8 +171,13 @@ function updateStudyRoom(){
  const now=new Date(),month=now.getMonth(),hour=now.getHours();
  const season=studyRoomSeasons.find(s=>s.months.includes(month))||studyRoomSeasons[0];
  const time=studyRoomTimes.find(t=>hour>=t.from&&hour<t.to)||studyRoomTimes[0];
- const view=$('studyRoomView'),quietText=view.classList.contains('room-quiet-text');
- view.className='study-room-view season-'+season.id+' time-'+time.id+(quietText?' room-quiet-text':'');
+ const view=$('studyRoomView');
+ // Keep structural and user-state classes (little-planet-view, quiet-text,
+ // weather states, etc.) intact; update only the date-dependent classes.
+ for(const name of [...view.classList]){
+  if(name.startsWith('season-')||name.startsWith('time-'))view.classList.remove(name);
+ }
+ view.classList.add('season-'+season.id,'time-'+time.id);
  updateStudySky();
  view.style.setProperty('--sun-x',time.sunX);view.style.setProperty('--sun-y',time.sunY);
  $('studyRoomClock').textContent=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false});
