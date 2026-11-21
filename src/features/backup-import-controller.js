@@ -6,7 +6,7 @@ export function createBackupImportController({
   validate,
   buildCurrentBackup,
   confirmAction = () => false,
-  applySettings = () => true,
+  captureSettings = () => ({}),\n  applySettings = () => true,
   rollbackSettings = () => true,
   onSuccess = () => {},
   onMessage = () => {},
@@ -34,7 +34,7 @@ export function createBackupImportController({
       return { ok: false, stage: "cancelled" };
     }
 
-    const currentSnapshot = buildCurrentBackup();
+    const currentSnapshot = buildCurrentBackup();\n    const settingsSnapshot = captureSettings();
     if (!storage.setJSON("focus-preimport-backup", currentSnapshot)) {
       onMessage("端末内バックアップを作成できなかったため、読み込みを中止したよ。");
       return { ok: false, stage: "backup" };
@@ -58,7 +58,7 @@ export function createBackupImportController({
 
     const transaction = statsStore.replaceStats(next.stats);
     if (!transaction.ok) {
-      if (settingsApplied) rollbackSettings(currentSnapshot);
+      if (settingsApplied) rollbackSettings(settingsSnapshot);
       onMessage("学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。");
       return { ok: false, stage: "stats", transaction };
     }
