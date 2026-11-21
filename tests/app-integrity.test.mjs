@@ -606,3 +606,12 @@ test("stats replacement keeps the pre-import backup and old stats when the new w
   assert.equal(values.get("focus-stats"), original);
   assert.deepEqual(JSON.parse(values.get("focus-preimport-backup")), { app: "FOCUS", version: 3 });
 });
+
+
+test("document head uses relative PWA asset paths for GitHub Pages subpaths", async () => {
+  const html = await read("../index.html");
+  assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);
+  assert.match(html, /<link rel="icon" href="\.\/icon\.svg"/);
+  assert.match(html, /<link rel="apple-touch-icon" href="\.\/icon-192\.png"/);
+  assert.doesNotMatch(html, /(?:href|src)="\/(?:manifest\.webmanifest|icon\.svg|icon-192\.png)"/);
+});
