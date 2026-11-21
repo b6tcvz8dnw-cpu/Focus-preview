@@ -64,7 +64,7 @@ document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.
 const hourglass = mountHourglass({ getRemainingSeconds });
 const studyRoom = mountStudyRoom({ updateSky: updateStudySky });
 function refreshAfterReturn(){if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAfterReturn()});
+document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('app-document-hidden',document.hidden);if(!document.hidden)refreshAfterReturn()});
 // iOS Safari may restore a page from the back-forward cache without a full reload.
 window.addEventListener('pageshow',event=>{if(event.persisted)refreshAfterReturn()});
 function setStudyRoomMode(enabled){
