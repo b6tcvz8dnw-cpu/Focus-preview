@@ -18,9 +18,9 @@ export function createNotificationController({
     onStateChange(enabled);
   }
 
-  function persist(next) {
+  function persist(next, { save = true } = {}) {
     enabled = Boolean(next);
-    storage.setText("focus-notifications", String(enabled));
+    if (save) storage.setText("focus-notifications", String(enabled));
     render();
   }
 
