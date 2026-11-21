@@ -1559,7 +1559,11 @@ function createNotificationHarness(options = {}) {
   const root = { getElementById(id) { return id === "notificationToggle" ? button : null; } };
   const storage = {
     getText(key) { return values.get(key) ?? null; },
-    setText(key, value) { values.set(key, value); }
+    setText(key, value) {
+      if (options.failWrite) return false;
+      values.set(key, value);
+      return true;
+    }
   };
   class FakeNotification {
     static permission = options.permission ?? "default";
@@ -1590,6 +1594,22 @@ test("notification controller restores preference and toggles permission-gated n
   assert.equal(await h.controller.toggle(), true);
   assert.equal(h.controller.isEnabled(), false);
   assert.equal(h.values.get("focus-notifications"), "false");
+});
+
+test("notification controller preserves its previous state when preference persistence fails", async () => {
+  const enabling = createNotificationHarness({ permission: "granted", failWrite: true });
+  assert.equal(await enabling.controller.toggle(), false);
+  assert.equal(enabling.controller.isEnabled(), false);
+  assert.equal(enabling.button.pressed, "false");
+  assert.equal(enabling.values.get("focus-notifications"), "false");
+  assert.match(enabling.messages.at(-1), /保存できなかった/);
+
+  const disabling = createNotificationHarness({ initiallyEnabled: true, failWrite: true });
+  assert.equal(await disabling.controller.toggle(), false);
+  assert.equal(disabling.controller.isEnabled(), true);
+  assert.equal(disabling.button.pressed, "true");
+  assert.equal(disabling.values.get("focus-notifications"), "true");
+  assert.equal(disabling.controller.setEnabled(false), false);
 });
 
 test("notification controller keeps notifications disabled when permission is denied or unavailable", async () => {
