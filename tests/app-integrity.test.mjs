@@ -60,6 +60,32 @@ test("applying timer settings warns before resetting an active session", async (
   assert.ok(handler.includes("現在のセッションは最初から"));
 });
 
+test("interactive controls have visible keyboard focus and comfortable touch targets", async () => {
+  const html = await read("../index.html");
+  assert.ok(html.includes(":focus-visible"));
+  assert.ok(html.includes("button,summary{min-height:44px}"));
+  assert.ok(html.includes(".tab{min-height:48px}"));
+  assert.ok(html.includes("@media(prefers-reduced-motion:reduce)"));
+  assert.ok(html.includes("animation:none!important"));
+});
+
+test("timer display exposes timer semantics and decorative ring is hidden", async () => {
+  const html = await read("../index.html");
+  assert.ok(html.includes('id="clock" role="timer"'));
+  assert.ok(html.includes('class="ring" viewBox="0 0 200 200" aria-hidden="true"'));
+  assert.ok(html.includes('id="status" role="status" aria-live="polite"'));
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("b.setAttribute('aria-pressed',String(active))"));
+});
+
+test("countdown intervals match the one-second display precision", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("setInterval(tick,1000)"));
+  assert.ok(script.includes("setInterval(tickHourglass,1000)"));
+  assert.ok(!script.includes("setInterval(tick,250)"));
+  assert.ok(!script.includes("setInterval(tickHourglass,250)"));
+});
+
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
