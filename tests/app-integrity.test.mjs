@@ -17,6 +17,8 @@ import { writeStatsWithBackup } from "../src/data/transactions.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
+const cssFiles = ["foundation.css", "study-room.css", "app-components.css", "device-layout.css", "study-room-visuals.css", "accessibility.css"];
+
 const readStyles = async () => (await Promise.all([
   read("../src/styles/foundation.css"),
   read("../src/styles/study-room.css"),
