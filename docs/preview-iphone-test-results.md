@@ -32,3 +32,13 @@ The user confirmed that the following checks passed on their iPhone:
 2. Confirm backup export/import and recovery behavior on the preview.
 3. Review the production migration plan and rollback procedure.
 4. Obtain explicit approval before merging or deploying any production changes.
+
+
+## Additional data-protection hardening
+
+After the iPhone smoke test, the preview import flow was strengthened:
+- The pre-import snapshot must be written before study stats are replaced.
+- A failed stats write leaves the previous stats intact and keeps the pre-import snapshot.
+- Application memory is updated only after the new stats are saved.
+- Automated coverage was expanded with three transaction failure-path tests.
+- Production remains unchanged.
