@@ -276,3 +276,12 @@
 - Appearance and notification controllers expose non-persisting state application for this coordinated transaction, avoiding duplicate writes after the import controller has already persisted settings.
 - Statistics state is only published by `statsStore.replaceStats` after the stats payload is saved. A failed stats write leaves the prior stats state intact.
 - The backup JSON schema and existing storage keys remain unchanged. Preview cache advanced to v8.
+
+
+## Phase 6 — Transactional stats mutations audit — 2026-11-22
+
+- A persistence-failure audit found that `stats-store.js` previously published a candidate state before confirming that `focus-stats` had been saved.
+- The store now normalizes and serializes a candidate first, writes it, and only then publishes the new in-memory state and notifies views.
+- If persistence fails, add/edit/delete/clear-day/goal mutations return `false`; the previous in-memory snapshot and rendered state remain authoritative.
+- The UI now reports failed writes for session completion, goals, history edits/deletions, reflections, and day clearing. Clearing records no longer resets the timer before the record write succeeds.
+- Added regression coverage for failed writes across all stats mutation operations.
