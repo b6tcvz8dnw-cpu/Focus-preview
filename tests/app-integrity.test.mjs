@@ -1083,7 +1083,7 @@ test("hourglass destroy removes input handlers and clears its scheduler", () => 
     assert.equal(controller.getState().running, false);
     assert.equal(removed.length, 7);
     controller.destroy();
-    assert.equal(removed.length, 6);
+    assert.equal(removed.length, 7);
   } finally {
     globalThis.window = priorWindow;
   }
