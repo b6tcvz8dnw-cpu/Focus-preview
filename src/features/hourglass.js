@@ -44,6 +44,12 @@ export function mountHourglass({ getRemainingSeconds, root = document } = {}) {
     if (running) { tick(); if (remaining > 0) { stop(); render(); } }
     else start();
   });
+  button.addEventListener('keydown', event => {
+    if (event.key.toLowerCase() !== 'r' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    reset();
+    $('hourglassState').textContent = '5分に戻しました';
+  });
   button.addEventListener('pointerdown', event => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     longPressed = false;
