@@ -718,6 +718,15 @@ test("study room hourglass remains above decorative layers and accepts touch inp
   assert.match(main, /hourglassButton\.addEventListener\('pointerdown'/);
 });
 
+test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
+  const html = await read("../index.html");
+  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*inset:0!important/);
+  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*width:100%!important;height:100%!important/);
+  assert.match(html, /\.planet-hourglass \.room-hourglass-shelf\{[^}]*transform:none!important/);
+  assert.match(html, /\.planet-hourglass \.desk-hourglass-time\{display:block!important/);
+  assert.match(html, /\.planet-hourglass \.desk-hourglass-label\{display:block!important/);
+});
+
 test("study room contains active celestial motion and a reduced-motion fallback", async () => {
   const html = await read("../index.html");
   assert.ok(html.includes("@keyframes star-twinkle"));
