@@ -1,4 +1,4 @@
-const CACHE='focus-preview-pwa-v11';
+const CACHE='focus-preview-pwa-v12';
 const CACHE_PREFIX='focus-preview-';
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...BUILD_ASSETS];
