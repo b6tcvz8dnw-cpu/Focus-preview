@@ -23,16 +23,20 @@ export function escapeHTML(value) {
  */
 export function createStudyViews({ root = document } = {}) {
   const $ = id => root.getElementById(id);
+  let lastAchievementMinutes = null;
 
   function renderAchievements(minutes) {
+    const currentMinutes = Math.max(0, Number(minutes) || 0);
+    if (currentMinutes === lastAchievementMinutes) return;
+    lastAchievementMinutes = currentMinutes;
     $("achievementList").innerHTML = achievements.map(item => {
-      const earned = minutes >= item.minutes;
-      const progress = Math.min(100, minutes / item.minutes * 100);
+      const earned = currentMinutes >= item.minutes;
+      const progress = Math.min(100, currentMinutes / item.minutes * 100);
       return '<div class="achievement ' + (earned ? "" : "locked") + '"><div class="achievement-icon">' + item.icon + '</div><div><strong>' + item.title + '</strong><small>' + item.description + '</small><div class="achievement-progress"><i style="width:' + progress + '%"></i></div></div><div class="achievement-state">' + (earned ? "達成！" : Math.floor(progress) + "%") + '</div></div>';
     }).join("");
-    const next = achievements.find(item => minutes < item.minutes);
+    const next = achievements.find(item => currentMinutes < item.minutes);
     $("achievementNext").textContent = next
-      ? "次の達成まで：あと" + (next.minutes - minutes) + "分"
+      ? "次の達成まで：あと" + (next.minutes - currentMinutes) + "分"
       : "すべてのアチーブメントを達成！";
   }
 
