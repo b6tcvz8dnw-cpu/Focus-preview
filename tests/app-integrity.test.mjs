@@ -226,6 +226,15 @@ test("decorative CSS animations pause while the document is backgrounded", async
   assert.match(styles, /body\.app-document-hidden \*\{animation-play-state:paused!important\}/);
 });
 
+test("Study Room animations pause while another page is selected", async () => {
+  const html = await read("../index.html");
+  const styles = await readStyles();
+  assert.ok(html.includes('id="studyRoomPage"'));
+  assert.match(styles, /#studyRoomPage\[hidden\] \.study-room-view/);
+  assert.match(styles, /#studyRoomPage\[hidden\] \.study-room-view \*/);
+  assert.match(styles, /animation-play-state:paused!important/);
+});
+
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
