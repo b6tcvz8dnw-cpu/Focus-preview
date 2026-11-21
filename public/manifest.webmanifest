@@ -1,0 +1,14 @@
+{
+  "name": "FOCUS — 学習集中タイマー",
+  "short_name": "FOCUS",
+  "description": "集中と休憩を切り替える学習用ポモドーロタイマー",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101915",
+  "theme_color": "#17231f",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+  ]
+}

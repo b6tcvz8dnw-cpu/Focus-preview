@@ -1,0 +1,19 @@
+{
+  "name": "focus-study-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FOCUS study timer — safe refactoring foundation",
+  "scripts": {
+    "test": "node --test",
+    "test:integrity": "node --test tests/app-integrity.test.mjs",
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/build.mjs",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "vite": "6.4.6"
+  }
+}

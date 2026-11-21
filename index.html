@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17231f">
+<meta name="description" content="集中と休憩を切り替える学習用ポモドーロタイマー">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FOCUS">
+<title>FOCUS — 学習集中タイマー</title>
+<style>
+:root{color-scheme:dark;--bg:#101915;--panel:#19251f;--surface-deep:#111b16;--line:#304138;--text:#edf4ef;--muted:#9eafa4;--accent:#8ec5a3;--accent2:#294b38;--tab-bg:rgba(16,25,21,.96)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100svh}
+main{max-width:520px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:center}.brand{font-size:23px;font-weight:800;letter-spacing:2px}.brand span{color:var(--accent)}.status{font-size:11px;color:var(--muted);letter-spacing:1px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.mode,.secondary,.primary{border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);padding:11px 7px;font-size:14px}
+.mode.active{background:var(--accent2);border-color:var(--accent);color:#eaffef;font-weight:700}
+.timer{display:grid;place-items:center;position:relative;width:min(72vw,270px);aspect-ratio:1;margin:20px auto 12px}
+svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}.ring circle{fill:none;stroke-width:7}.track{stroke:var(--line)}.progress{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .25s linear}
+.clock{font-size:clamp(55px,15vw,76px);font-weight:700;letter-spacing:-3px;font-variant-numeric:tabular-nums}.mode-label{color:var(--muted);font-size:14px}
+.controls{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}.primary{background:var(--accent);border-color:var(--accent);color:#102018;font-weight:800;min-width:145px;padding:13px 20px}.secondary{padding:12px 15px}
+.hint{text-align:center;color:var(--muted);font-size:12px;margin:14px 0 2px}
+h2{font-size:15px;margin:0 0 13px}.muted{color:var(--muted);font-size:12px}
+input{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);font-size:16px;margin:7px 0 12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.stat{background:var(--surface-deep);border-radius:13px;padding:12px 3px}.stat strong{display:block;font-size:24px}.stat span{font-size:11px;color:var(--muted)}
+.progressbar{display:flex;gap:6px;margin-top:9px}.progressbar i{height:7px;flex:1;border-radius:10px;background:var(--line)}.progressbar i.done{background:var(--accent)}
+details summary{cursor:pointer;font-weight:700;font-size:14px} .settings{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.settings label{font-size:12px;color:var(--muted)}.settings input{margin-bottom:0}
+.wide{width:100%;margin-top:12px}.foot{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:11px}.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;padding:8px}
+#toast{text-align:center;color:var(--accent);font-size:13px;min-height:18px}
+
+.week-summary{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}.week-total{font-size:24px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.week-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;align-items:end;height:142px;padding:8px 0 0}
+.day-col{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;min-width:0}
+.day-value{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar-track{height:92px;width:min(100%,30px);display:flex;align-items:flex-end;background:var(--surface-deep);border-radius:8px;overflow:hidden}
+.day-bar{width:100%;min-height:0;background:var(--accent);border-radius:7px 7px 2px 2px;transition:height .25s}
+.day-label{font-size:11px;color:var(--muted)}
+
+
+/* Immersive timer view */
+body.timer-large-mode{overflow:hidden}
+body.timer-large-mode #timerPanel{position:fixed;inset:0;z-index:100;width:100%;height:100vh;height:100dvh;max-width:none;margin:0;border:0;border-radius:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(12px,3vh,28px);padding:calc(18px + env(safe-area-inset-top)) 18px calc(22px + env(safe-area-inset-bottom));background:var(--bg);overflow-y:auto}
+body.timer-large-mode #timerPanel .timer{width:min(78vw,58vh,520px);margin:clamp(8px,2vh,22px) auto}
+body.timer-large-mode #timerPanel .clock{font-size:clamp(64px,18vw,138px);letter-spacing:-5px}
+body.timer-large-mode #timerPanel .mode-label{font-size:clamp(14px,2.5vw,20px)}
+body.timer-large-mode #timerPanel .modes{width:min(100%,620px);margin:0 auto}
+body.timer-large-mode #timerPanel .controls{width:min(100%,620px);margin:0 auto}
+body.timer-large-mode #timerPanel .hint{margin:0}
+body.timer-large-mode #timerPage>details,body.timer-large-mode .tabbar,body.timer-large-mode header,body.timer-large-mode .foot,body.timer-large-mode #toast{visibility:hidden}
+body.timer-large-mode #timerPanel #largeToggle{border-color:var(--accent);background:var(--accent2);color:var(--text)}
+@media (orientation:landscape){body.timer-large-mode #timerPanel{gap:8px}body.timer-large-mode #timerPanel .timer{width:min(48vh,360px);margin:4px auto}body.timer-large-mode #timerPanel .clock{font-size:clamp(58px,12vw,100px)}}
+[hidden]{display:none!important}
+main{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.page{display:flex;flex-direction:column;gap:16px}
+.tabbar{position:fixed;z-index:10;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,520px);padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;background:var(--tab-bg);border-top:1px solid var(--line);backdrop-filter:blur(14px)}
+.tab{border:0;border-radius:10px;background:transparent;color:var(--muted);padding:7px 2px;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.tab span{font-size:18px;line-height:1.1}
+.tab.active{background:var(--accent2);color:var(--accent);font-weight:700}
+
+
+.theme-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.theme-choice,.mark-choice{border:1px solid var(--line);border-radius:12px;background:var(--surface-deep);color:var(--text);padding:11px 9px;font-size:13px;text-align:left}
+.theme-choice{display:flex;align-items:center;gap:9px}
+.theme-choice i{display:inline-block;width:15px;height:15px;border-radius:50%;flex:none}
+.theme-choice.selected,.mark-choice.selected{border-color:var(--accent);background:var(--accent2)}
+.mark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mark-choice{text-align:center}
+.achievement-list{display:grid;grid-template-columns:1fr;gap:9px}
+.achievement{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:13px;background:var(--surface-deep)}
+.achievement-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--accent2);color:var(--accent);font-size:19px}
+.achievement.locked{opacity:.62}
+.achievement strong{display:block;font-size:13px}
+.achievement small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.achievement-state{font-size:10px;color:var(--accent);white-space:nowrap}
+.achievement-progress{height:5px;background:var(--line);border-radius:8px;overflow:hidden;margin-top:7px}
+.achievement-progress i{display:block;height:100%;background:var(--accent);border-radius:8px}
+.achievement-next{font-size:12px;color:var(--muted);margin-top:12px}
+
+
+/* Study tracking extensions */
+.field-select{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:var(--surface-deep);color:var(--text);font-size:15px;margin:7px 0 12px}
+.inline-row{display:flex;gap:8px;align-items:center}.inline-row input{min-width:0;flex:1}.inline-row button{white-space:nowrap}
+.goal-line{margin:12px 0}.goal-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:6px}.goal-track{height:8px;background:var(--line);border-radius:8px;overflow:hidden}.goal-fill{height:100%;background:var(--accent);border-radius:8px}
+.calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.calendar-head button{border:1px solid var(--line);background:var(--surface-deep);color:var(--text);border-radius:9px;padding:7px 11px}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.calendar-cell{min-height:42px;border-radius:9px;background:var(--surface-deep);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);gap:3px}.calendar-cell.head{min-height:22px;background:transparent;font-size:10px}.calendar-cell.today{outline:1px solid var(--accent);color:var(--text)}.calendar-cell .heat{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:var(--heat,0)}
+.history-list{display:flex;flex-direction:column;gap:8px}.history-item{padding:11px;border:1px solid var(--line);border-radius:12px;background:var(--surface-deep)}.history-top{display:flex;justify-content:space-between;gap:8px;font-size:12px}.history-item strong{display:block;font-size:13px;margin:5px 0}.history-item small{color:var(--muted)}.history-actions{display:flex;gap:7px;margin-top:8px}.history-actions button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:6px 9px;font-size:11px}
+.sound-controls{display:flex;gap:8px;flex-wrap:wrap}.sound-controls button{flex:1;min-width:85px}.sound-controls button.selected{border-color:var(--accent);background:var(--accent2)}
+textarea.field-select{font-family:inherit;resize:vertical;min-height:80px}
+.analytics-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}.analytics-row:last-child{border:0}
+.import-label{display:block;text-align:center;border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text);font-size:13px;margin-top:9px}
+
+
+/* A small study room that follows the real local season and time */
+.tabbar{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tab{font-size:9px;padding-left:1px;padding-right:1px}
+.tab span{font-size:16px}
+.study-room-panel{padding:14px;overflow:hidden}
+.study-room-view{--sky1:#8198a5;--sky2:#d8b9a0;--land:#52665d;position:relative;min-height:clamp(350px,62vh,540px);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#202c2b 0%,#29352f 100%);display:flex;flex-direction:column;justify-content:space-between;padding:18px;color:#f6f0e6}
+.study-room-view.time-dawn{--sky1:#687d9b;--sky2:#e8a982;--land:#59645b}
+.study-room-view.time-morning{--sky1:#78a9c2;--sky2:#d9e2d3;--land:#52715c}
+.study-room-view.time-day{--sky1:#6ca5c5;--sky2:#d5e6dc;--land:#4e765f}
+.study-room-view.time-evening{--sky1:#5a5273;--sky2:#e39a78;--land:#394b4a}
+.study-room-view.time-night{--sky1:#101b36;--sky2:#394765;--land:#172b30}
+.study-room-view.time-late{--sky1:#090f21;--sky2:#222d49;--land:#101f27}
+.study-room-view.season-spring{--season:#d4b5a0;--season-soft:#e7c9c0}
+.study-room-view.season-summer{--season:#9fbd91;--season-soft:#c1d1a2}
+.study-room-view.season-autumn{--season:#c58c62;--season-soft:#d7ad7d}
+.study-room-view.season-winter{--season:#a9bdce;--season-soft:#d1dce4}
+.study-room-top,.study-room-bottom{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.study-room-bottom{z-index:8;isolation:isolate}.study-room-clock,.study-room-date{position:relative;z-index:9}
+.study-room-kicker{font-size:10px;letter-spacing:2px;opacity:.78}
+.study-room-clock{font-size:clamp(26px,7vw,38px);font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.study-room-date{font-size:11px;opacity:.78;margin-top:3px}
+.study-window{position:absolute;inset:15% 8% 24%;border:9px solid #302d2a;border-radius:5px;box-shadow:0 0 0 2px rgba(244,226,195,.28),inset 0 0 0 2px rgba(255,255,255,.16),0 15px 35px rgba(0,0,0,.28);overflow:hidden;background:linear-gradient(180deg,var(--sky1),var(--sky2));}
+.study-window:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,255,255,.16),transparent 50%);z-index:2}
+.study-sun{position:absolute;width:clamp(38px,10vw,62px);height:clamp(38px,10vw,62px);border-radius:50%;left:var(--sun-x,68%);top:var(--sun-y,18%);background:#f2dfb5;box-shadow:0 0 40px 12px rgba(246,220,170,.22);opacity:.9}
+.time-night .study-sun,.time-late .study-sun{background:#dce2e8;box-shadow:0 0 30px 8px rgba(209,224,242,.2)}
+.study-hills{position:absolute;left:-8%;right:-8%;bottom:-3%;height:43%;background:linear-gradient(155deg,transparent 0 20%,var(--land) 20.5% 100%);clip-path:polygon(0 48%,18% 16%,34% 49%,56% 8%,76% 43%,100% 17%,100% 100%,0 100%)}
+.study-hills:after{content:"";position:absolute;inset:30% 0 0;background:linear-gradient(180deg,rgba(18,40,36,.05),rgba(13,34,31,.55))}
+.season-spring .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(7px 9px at 18% 72%,#f4c8d2 98%,transparent),radial-gradient(6px 8px at 26% 82%,#f4d8b0 98%,transparent),radial-gradient(7px 9px at 78% 68%,#f0c1cb 98%,transparent),radial-gradient(6px 8px at 87% 83%,#f4d8b0 98%,transparent);z-index:2;opacity:.9}
+.season-summer .study-hills{filter:saturate(1.35)}
+.season-autumn .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(9px 12px at 14% 70%,#c77d4d 98%,transparent),radial-gradient(8px 11px at 25% 82%,#d7a35e 98%,transparent),radial-gradient(9px 12px at 82% 69%,#b96d43 98%,transparent),radial-gradient(8px 11px at 90% 83%,#d7a35e 98%,transparent);z-index:2;opacity:.9}
+.season-winter .study-hills{background:linear-gradient(155deg,transparent 0 20%,#8499a2 20.5% 100%)}
+.season-winter .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 18% 70%,rgba(240,247,250,.7),transparent 35%),radial-gradient(ellipse at 80% 75%,rgba(240,247,250,.55),transparent 38%);z-index:2}
+.study-window-cross{position:absolute;z-index:4;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 49%,rgba(39,35,31,.75) 49.5% 50.5%,transparent 51%),linear-gradient(0deg,transparent 49%,rgba(39,35,31,.75) 49.5% 50.5%,transparent 51%)}
+.study-room-caption{max-width:260px;font-size:12px;line-height:1.9;opacity:.9}
+.study-room-season{font-size:11px;letter-spacing:1px;text-align:right}
+.study-room-title{font-size:22px;font-weight:500;letter-spacing:2px;margin:7px 0}
+.study-room-note{font-size:12px;color:var(--muted);line-height:1.9;margin:12px 2px 2px}
+.study-room-foot{font-size:10px;letter-spacing:1.5px;opacity:.62}
+@media(prefers-reduced-motion:no-preference){.study-sun{transition:top 1.2s ease,left 1.2s ease,background 1.2s ease}.study-window{transition:background 1.2s ease}}
+
+/* 2D picture-book view for the existing study room */
+.study-room-panel{padding:10px;background:transparent;border:0}
+.study-room-view{min-height:clamp(520px,78vh,760px);border-radius:22px;padding:18px;background:linear-gradient(180deg,#283c3b,#1e302b);box-shadow:0 20px 54px rgba(0,0,0,.24)}
+.study-window{inset:12% 6% 29%;border:13px solid #5a4435;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--sky1),var(--sky2));box-shadow:0 0 0 2px rgba(245,224,190,.5),inset 0 0 0 3px rgba(255,245,220,.3),0 20px 44px rgba(0,0,0,.36)}
+.study-window:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,rgba(255,255,255,.12),transparent 28% 72%,rgba(255,255,255,.08));z-index:3}
+.room-landscape{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.study-sun,.study-clouds,.study-hills{display:none!important}
+.study-weather-effects{z-index:2!important;pointer-events:none}
+.study-window-cross{z-index:4;background:linear-gradient(90deg,transparent 49.45%,rgba(58,43,33,.82) 49.7% 50.3%,transparent 50.55%),linear-gradient(0deg,transparent 49.45%,rgba(58,43,33,.82) 49.7% 50.3%,transparent 50.55%)}
+.study-window-glow{z-index:5;opacity:.7}
+.room-sun-disc{transform-box:fill-box;transform-origin:center;animation:room-sun-breathe 8s ease-in-out infinite alternate}
+.room-cloud{transform-box:fill-box;animation:room-cloud-drift 48s ease-in-out infinite alternate}
+.cloud-two{animation-duration:62s;animation-direction:alternate-reverse}
+.room-birds{transform-box:fill-box;animation:room-bird-glide 25s ease-in-out infinite alternate}
+.room-distant-trees{transform-box:fill-box;transform-origin:bottom;animation:room-trees-sway 8s ease-in-out infinite alternate}
+.room-floating-petals{animation:room-petal-drift 18s ease-in-out infinite alternate}
+.time-dawn .room-sun-disc,.time-morning .room-sun-disc,.time-day .room-sun-disc{fill:#f9e6b7}
+.time-evening .room-sun-disc{fill:#f2b98d}
+.time-night .room-sun-disc,.time-late .room-sun-disc{fill:#e5eaf2}
+.time-night .room-sun-glow,.time-late .room-sun-glow{opacity:.35}
+.season-spring .room-meadow{filter:hue-rotate(8deg) saturate(.9)}
+.season-summer .room-meadow{filter:saturate(1.22)}
+.season-autumn .room-meadow{filter:hue-rotate(-24deg) saturate(.92)}
+.season-winter .room-meadow{filter:grayscale(.38) brightness(1.12)}
+.season-winter .room-distant-trees{opacity:.48}
+.season-spring .room-floating-petals{animation-duration:12s}
+.study-room-view .room-desk-scene{bottom:7%;height:34%}
+.desk-surface{top:47%;height:17%;background:linear-gradient(180deg,#b18a65,#79563c 42%,#513827);border-top:5px solid rgba(238,202,157,.72);box-shadow:0 -10px 28px rgba(0,0,0,.25),0 18px 26px rgba(0,0,0,.32)}
+.desk-front{background:linear-gradient(90deg,#38271f,#79563d 48%,#3c2a20)}
+.room-plant{filter:drop-shadow(0 8px 6px rgba(0,0,0,.2))}
+.desk-books{filter:drop-shadow(0 5px 5px rgba(0,0,0,.2))}
+.desk-lamp{filter:drop-shadow(0 6px 9px rgba(0,0,0,.25))}
+@keyframes room-sun-breathe{from{transform:scale(.97);opacity:.86}to{transform:scale(1.04);opacity:1}}
+@keyframes room-cloud-drift{from{translate:-22px 2px}to{translate:30px -5px}}
+@keyframes room-bird-glide{from{translate:-10px 0}to{translate:18px -9px}}
+@keyframes room-trees-sway{from{transform:skewX(-1deg)}to{transform:skewX(1.3deg)}}
+@keyframes room-petal-drift{from{translate:-12px 5px;rotate:-8deg}to{translate:18px -9px;rotate:12deg}}
+@media(max-width:520px){.study-room-panel{padding:0}.study-room-view{min-height:clamp(560px,80vh,760px);padding:14px}.study-window{inset:14% 4% 31%;border-width:9px}.room-desk-scene{bottom:9%;height:31%}}
+@media(prefers-reduced-motion:reduce){.room-sun-disc,.room-cloud,.room-birds,.room-distant-trees,.room-floating-petals{animation:none!important}}
+
+/* Safe-area framing and richer animated scenery */
+.study-room-panel{padding:8px 10px 12px}
+.study-room-view{min-height:clamp(470px,67svh,620px);padding:calc(env(safe-area-inset-top,0px) + 18px) 18px 18px}
+.study-room-top{padding-top:2px;min-height:42px}
+.study-room-top-actions{gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.study-room-weather{max-width:min(34vw,190px)}
+.study-window{inset:16% 6% 32%;border-width:12px}
+.room-landscape{filter:saturate(.94) contrast(.98)}
+.room-mountains{transform-box:fill-box;transform-origin:center bottom;animation:room-mountain-haze 18s ease-in-out infinite alternate}
+.room-river{transform-box:fill-box;animation:room-water-shimmer 7s ease-in-out infinite alternate}
+.room-woodland{transform-box:fill-box;transform-origin:bottom center;animation:room-woodland-sway 6.5s ease-in-out infinite alternate}
+.room-woodland circle:nth-child(2n){animation:room-leaf-glint 5s ease-in-out infinite alternate}
+.room-cloud-one{animation-duration:42s}
+.room-cloud-two{animation-duration:58s}
+.room-curtain{position:absolute;z-index:2;top:0;bottom:0;width:13%;pointer-events:none;opacity:.94;filter:drop-shadow(0 5px 8px rgba(34,24,18,.18))}
+.room-curtain-left{left:0;background:linear-gradient(90deg,#80604b 0%,#b38a68 42%,#8b674f 74%,rgba(83,60,46,.18) 100%);clip-path:polygon(0 0,100% 0,84% 18%,100% 38%,83% 60%,100% 82%,85% 100%,0 100%)}
+.room-curtain-right{right:0;background:linear-gradient(270deg,#80604b 0%,#b38a68 42%,#8b674f 74%,rgba(83,60,46,.18) 100%);clip-path:polygon(0 0,100% 0,100% 100%,15% 100%,0 82%,17% 60%,0 38%,16% 18%)}
+.room-curtain:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,231,199,.12) 0 3px,transparent 3px 13px);opacity:.7}
+.study-window-cross{z-index:6}
+.study-window-glow{z-index:7}
+.study-weather-effects{z-index:4!important}
+.room-floating-petals ellipse{transform-box:fill-box;transform-origin:center;animation:room-petal-spin 8s ease-in-out infinite alternate}
+.room-floating-petals ellipse:nth-child(2){animation-delay:-3s;animation-duration:11s}
+.room-floating-petals ellipse:nth-child(3){animation-delay:-5s;animation-duration:9s}
+.room-birds{animation-duration:19s}
+.room-desk-scene{bottom:7%;height:32%}
+@keyframes room-mountain-haze{from{opacity:.42;translate:0 2px}to{opacity:.66;translate:0 -2px}}
+@keyframes room-water-shimmer{from{translate:-5px 0;opacity:.68}to{translate:8px -2px;opacity:.94}}
+@keyframes room-woodland-sway{from{transform:skewX(-1.6deg) scaleY(.99)}to{transform:skewX(1.8deg) scaleY(1.01)}}
+@keyframes room-leaf-glint{from{opacity:.58}to{opacity:1}}
+@keyframes room-petal-spin{from{rotate:-24deg;translate:-5px 3px}to{rotate:28deg;translate:9px -12px}}
+@media(max-width:520px){
+ .study-room-panel{padding:4px 5px 10px}
+ .study-room-view{min-height:clamp(465px,66svh,590px);padding:calc(env(safe-area-inset-top,0px) + 14px) 12px 14px;border-radius:18px}
+ .study-room-top{align-items:flex-start;min-height:48px}
+ .study-room-top-actions{gap:4px}
+ .study-room-weather{max-width:31vw;font-size:8px;padding:0 6px}
+ .room-text-toggle,.room-exit{flex:0 0 28px}
+ .study-window{inset:18% 4% 34%;border-width:9px}
+ .room-curtain{width:11%}
+ .room-desk-scene{bottom:8%;height:29%}
+}
+@media(orientation:landscape) and (max-height:520px){
+ .study-room-view{min-height:clamp(390px,82svh,500px);padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 12px}
+ .study-window{inset:16% 7% 29%}
+ .room-desk-scene{bottom:5%;height:31%}
+}
+@media(prefers-reduced-motion:reduce){
+ .room-mountains,.room-river,.room-woodland,.room-woodland circle,.room-floating-petals ellipse{animation:none!important}
+}
+
+/* Compact settings shortcut on the timer page */
+.timer-page-tools{display:flex;justify-content:flex-end;margin:0 2px 8px}
+.small-settings{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:6px 10px;font-size:11px;letter-spacing:.3px;min-height:30px}
+.small-settings:active{transform:scale(.97)}
+/* Quiet five-minute hourglass */
+.hourglass-panel{margin-top:14px;text-align:center;padding:18px 14px}
+.hourglass-heading{font-size:14px;letter-spacing:1px;margin:0 0 4px}
+.hourglass-sub{font-size:11px;color:var(--muted);margin:0 0 14px}
+.hourglass-stage{display:flex;align-items:center;justify-content:center;gap:20px;min-height:138px}
+.hourglass-art{width:76px;height:118px;overflow:visible;filter:drop-shadow(0 7px 10px rgba(0,0,0,.18))}
+.hourglass-frame{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;opacity:.88}
+.hourglass-glass{fill:rgba(210,226,218,.07);stroke:rgba(224,233,226,.7);stroke-width:2}
+.hourglass-sand-top{fill:var(--accent);transform-origin:50px 12px;transition:transform .5s linear}
+.hourglass-sand-bottom{fill:var(--accent);transform-origin:50px 108px;transition:transform .5s linear}
+.hourglass-stream{stroke:var(--accent);stroke-width:2.2;stroke-linecap:round;opacity:0}
+.hourglass-art.is-running .hourglass-stream{opacity:.8;animation:sand-stream .7s ease-in-out infinite alternate}
+.hourglass-readout{text-align:left;min-width:112px}
+.hourglass-time{font-size:clamp(32px,9vw,42px);font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.hourglass-state{font-size:11px;color:var(--muted);margin-top:4px;min-height:16px}
+.hourglass-presets{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.hourglass-presets button{min-width:54px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-deep);color:var(--muted);font-size:11px}
+.hourglass-presets button.active{background:var(--accent2);border-color:var(--accent);color:var(--text)}
+.hourglass-controls{display:flex;justify-content:center;gap:8px}
+.hourglass-controls button{min-width:94px}
+.hourglass-foot{font-size:10px;color:var(--muted);margin:12px 0 0}
+@keyframes sand-stream{from{opacity:.35}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.hourglass-art.is-running .hourglass-stream{animation:none;opacity:.7}}
+
+/* A wider, immersive study nook with a desk by the window */
+body.study-room-fullscreen{overflow:hidden}
+body.study-room-fullscreen main{max-width:none;height:100dvh;padding:0;gap:0}
+body.study-room-fullscreen header,body.study-room-fullscreen .tabbar,body.study-room-fullscreen .foot,body.study-room-fullscreen #toast{display:none}
+body.study-room-fullscreen #studyRoomPage{position:fixed;inset:0;z-index:80;display:block!important;overflow:auto;background:var(--bg);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+body.study-room-fullscreen .study-room-panel{height:100%;padding:10px;border:0;background:transparent}
+body.study-room-fullscreen .study-room-view{min-height:calc(100dvh - 20px);border-radius:18px}
+.study-room-top-actions{display:flex;align-items:center;gap:10px}
+.room-exit{border:1px solid rgba(255,255,255,.3);background:rgba(12,18,17,.25);color:#fff;border-radius:30px;padding:7px 11px;font-size:11px;backdrop-filter:blur(8px)}
+.study-window{inset:15% 7% 29%;border-width:11px;box-shadow:0 0 0 2px rgba(244,226,195,.3),inset 0 0 0 2px rgba(255,255,255,.16),0 20px 45px rgba(0,0,0,.3)}
+.study-window-glow{position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 48%,transparent 58%);mix-blend-mode:screen;pointer-events:none}
+.room-desk-scene{position:absolute;z-index:5;left:-2%;right:-2%;bottom:10%;height:32%;pointer-events:none}
+.desk-surface{position:absolute;left:0;right:0;top:49%;height:15%;background:linear-gradient(180deg,#9a7150,#654832 45%,#39291f);border-top:5px solid rgba(221,183,137,.65);box-shadow:0 -9px 24px rgba(0,0,0,.22),0 15px 24px rgba(0,0,0,.25)}
+.desk-front{position:absolute;left:4%;right:4%;top:64%;height:40%;background:linear-gradient(90deg,#4a3428,#76543a 45%,#4b3327);clip-path:polygon(0 0,100% 0,94% 100%,6% 100%);box-shadow:0 12px 20px rgba(0,0,0,.3)}
+.desk-hourglass{pointer-events:auto;position:absolute;z-index:8;right:19%;top:0;width:112px;height:155px;border:0;background:transparent;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;padding:0 4px 8px;text-shadow:0 2px 8px rgba(0,0,0,.65);filter:drop-shadow(0 8px 9px rgba(0,0,0,.28))}
+.desk-hourglass:before{content:"";position:absolute;z-index:-1;bottom:4px;width:105px;height:15px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(5px)}
+.desk-hourglass .hourglass-art{width:58px;height:94px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35))}
+.desk-hourglass-time{font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.desk-hourglass-label{font-size:9px;opacity:.9;white-space:nowrap}
+.desk-books{position:absolute;left:18%;top:33%;z-index:7;display:flex;align-items:flex-end;gap:2px;transform:rotate(-4deg)}
+.desk-books i{display:block;width:16px;height:47px;border-radius:2px 2px 0 0;background:linear-gradient(90deg,#6d4b3b,#a97855,#583a30);box-shadow:2px 0 3px #30251f}
+.desk-books i:nth-child(2){height:55px;background:linear-gradient(90deg,#53655a,#8b9b7b,#34483d)}
+.desk-books i:nth-child(3){height:42px;background:linear-gradient(90deg,#8c6b45,#c09b65,#6e5036)}
+.desk-lamp{position:absolute;z-index:7;left:43%;top:6%;width:65px;height:92px}
+.desk-lamp:before{content:"";position:absolute;left:29px;top:30px;width:5px;height:54px;background:linear-gradient(90deg,#473b2c,#b39a6e,#53432f);transform:rotate(5deg)}
+.desk-lamp:after{content:"";position:absolute;left:7px;top:13px;width:48px;height:30px;background:linear-gradient(180deg,#d6bd8b,#806744);clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);filter:drop-shadow(0 0 16px rgba(245,207,139,.32))}
+.desk-lamp i{position:absolute;bottom:0;left:17px;width:38px;height:7px;border-radius:50%;background:#9b8058}
+.room-plant{position:absolute;z-index:7;left:7%;top:18%;width:42px;height:58px}
+.room-plant:before{content:"";position:absolute;bottom:0;left:5px;width:32px;height:22px;border-radius:3px 3px 9px 9px;background:linear-gradient(90deg,#795943,#c39b73,#684b38)}
+.room-plant i{position:absolute;bottom:17px;left:18px;width:15px;height:34px;border-radius:100% 0 100% 0;background:linear-gradient(135deg,#a3b28b,#526e53);transform:rotate(-25deg);transform-origin:bottom}
+.room-plant i:nth-child(2){transform:rotate(25deg);left:8px;height:29px}
+.room-plant i:nth-child(3){transform:rotate(2deg);left:16px;height:42px}
+.room-controls{display:flex;justify-content:center;align-items:center;gap:12px;padding:12px}
+body.study-room-fullscreen .room-controls{display:none}
+.study-room-note{position:relative;z-index:8;background:rgba(13,20,18,.22);padding:8px 12px;border-radius:10px;max-width:90%;margin:0 auto;text-align:center}
+@media(max-width:420px){.desk-hourglass{right:15%;transform:scale(.92);transform-origin:bottom center}.desk-lamp{left:43%}.room-plant{left:5%}}
+
+/* Weather-aware window and quiet ambient motion */
+.study-room-top-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.room-exit,.room-reset,.study-room-weather{height:27px;min-width:27px;border:1px solid rgba(255,255,255,.25);background:rgba(12,18,17,.2);color:#fff;border-radius:18px;backdrop-filter:blur(8px);font-size:10px}
+.room-exit{width:27px;padding:0;font-size:15px;line-height:1}
+.room-text-toggle{width:34px;padding:0;font-size:10px;letter-spacing:-.5px}
+.study-room-view.room-quiet-text .study-room-kicker,.study-room-view.room-quiet-text .study-room-title,.study-room-view.room-quiet-text .study-room-season,.study-room-view.room-quiet-text #studyRoomWeather,.study-room-view.room-quiet-text .study-room-bottom,.study-room-view.room-quiet-text .study-room-note,.study-room-view.room-quiet-text .desk-hourglass-time,.study-room-view.room-quiet-text .desk-hourglass-label{display:none!important}
+.study-room-view.room-quiet-text .study-room-top{justify-content:flex-end}
+.study-room-view.room-quiet-text .study-room-top-actions{gap:7px}
+.study-room-view.room-quiet-text .room-text-toggle{border-color:rgba(255,255,255,.55);background:rgba(12,18,17,.48)}
+.room-reset{width:27px;padding:0;font-size:15px;line-height:1}
+.study-room-weather{padding:0 9px;font-size:9px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.study-sun{animation:sun-breathe 7s ease-in-out infinite alternate;will-change:transform}
+.study-clouds{position:absolute;z-index:1;inset:0;opacity:0;pointer-events:none;transition:opacity 1.2s ease}
+.study-clouds:before,.study-clouds:after{content:"";position:absolute;width:100px;height:30px;border-radius:30px;background:rgba(244,246,241,.48);filter:blur(1px);box-shadow:20px -10px 0 -4px rgba(244,246,241,.42),-18px -5px 0 -7px rgba(244,246,241,.4)}
+.study-clouds:before{top:24%;left:15%;animation:cloud-drift 34s ease-in-out infinite alternate}
+.study-clouds:after{top:43%;left:62%;transform:scale(.72);opacity:.75;animation:cloud-drift 42s ease-in-out infinite alternate-reverse}
+.weather-cloudy .study-clouds,.weather-fog .study-clouds,.weather-rain .study-clouds,.weather-storm .study-clouds{opacity:.9}
+.weather-fog .study-clouds{filter:blur(9px);opacity:.7}
+.weather-rain .study-clouds:before,.weather-rain .study-clouds:after,.weather-storm .study-clouds:before,.weather-storm .study-clouds:after{background:rgba(105,125,137,.8);box-shadow:20px -10px 0 -4px rgba(105,125,137,.75),-18px -5px 0 -7px rgba(105,125,137,.7)}
+.weather-cloudy{--sky1:#84949b!important;--sky2:#b9c4c2!important}
+.weather-fog{--sky1:#9ba9a9!important;--sky2:#c4ceca!important}
+.weather-rain{--sky1:#536c7b!important;--sky2:#899ba2!important}
+.weather-storm{--sky1:#35495c!important;--sky2:#75828c!important}
+.weather-snow{--sky1:#9bb5c4!important;--sky2:#e0e8e8!important}
+.weather-night{--sky1:#101b36!important;--sky2:#394765!important}
+.weather-rain .study-weather-effects,.weather-storm .study-weather-effects{position:absolute;z-index:2;inset:-20%;opacity:.4;background:repeating-linear-gradient(108deg,transparent 0 19px,rgba(221,238,246,.35) 20px,transparent 21px 33px);animation:rain-fall 1.8s linear infinite;mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent)}
+.weather-snow .study-weather-effects{position:absolute;z-index:2;inset:-10%;background-image:radial-gradient(3px 3px at 14% 22%,rgba(255,255,255,.9) 98%,transparent),radial-gradient(2px 2px at 38% 65%,rgba(255,255,255,.8) 98%,transparent),radial-gradient(3px 3px at 76% 31%,rgba(255,255,255,.9) 98%,transparent),radial-gradient(2px 2px at 88% 74%,rgba(255,255,255,.8) 98%,transparent);background-size:160px 140px;animation:snow-fall 9s linear infinite}
+.weather-fog .study-weather-effects{position:absolute;z-index:2;inset:30% -15%;background:linear-gradient(180deg,transparent,rgba(239,242,235,.25),transparent);filter:blur(10px);animation:fog-drift 15s ease-in-out infinite alternate}
+.weather-night .study-sun{background:#e1e7ef!important;box-shadow:0 0 32px 9px rgba(209,224,242,.24)!important}
+.room-plant i{animation:leaf-sway 5s ease-in-out infinite alternate}
+.room-plant i:nth-child(2){animation-delay:-2s}.room-plant i:nth-child(3){animation-delay:-3.5s}
+.study-hills{animation:hill-breeze 12s ease-in-out infinite alternate}
+@keyframes sun-breathe{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+@keyframes cloud-drift{from{translate:-8px 0}to{translate:22px 3px}}
+@keyframes rain-fall{from{transform:translateY(-25px)}to{transform:translateY(35px)}}
+@keyframes snow-fall{from{background-position:0 -30px,0 -20px,0 -40px,0 -10px}to{background-position:25px 160px,-20px 120px,35px 140px,-10px 130px}}
+@keyframes fog-drift{from{transform:translateX(-6%);opacity:.45}to{transform:translateX(6%);opacity:.85}}
+@keyframes leaf-sway{from{transform:rotate(-27deg)}to{transform:rotate(-18deg)}}
+@keyframes hill-breeze{from{transform:translateX(-1px)}to{transform:translateX(2px)}}
+@media(prefers-reduced-motion:reduce){.study-sun,.study-clouds:before,.study-clouds:after,.study-weather-effects,.room-plant i,.study-hills{animation:none!important}}
+@media(max-width:420px){.study-room-top-actions{gap:4px}.study-room-weather{max-width:122px;font-size:8px}.room-exit,.room-reset{width:25px;min-width:25px;height:25px}}
+
+/* Nagoya study room landscape and desk hourglass styling */
+.room-exit{width:27px;height:27px;padding:0;display:grid;place-items:center;font-size:15px;line-height:1}
+.study-room-weather{font-size:9px;letter-spacing:.2px}
+.desk-hourglass{touch-action:pan-x pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.desk-hourglass:after{content:"";position:absolute;z-index:-1;bottom:5px;width:74px;height:9px;border-radius:3px;background:linear-gradient(180deg,#c79b65,#785033 48%,#4a3023);border:1px solid rgba(240,203,148,.55);box-shadow:0 3px 5px rgba(0,0,0,.3)}
+.desk-hourglass .hourglass-art{width:56px;height:92px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22))}
+.desk-hourglass .hourglass-frame{stroke:#c9a36d;stroke-width:4.5;opacity:1}
+.desk-hourglass .hourglass-glass{fill:rgba(214,231,226,.2);stroke:rgba(239,235,213,.88);stroke-width:2.2}
+.desk-hourglass .hourglass-sand-top,.desk-hourglass .hourglass-sand-bottom{fill:#d9b477}
+.desk-hourglass .hourglass-stream{stroke:#e4c78f;stroke-width:2}
+.desk-hourglass-time{color:#f4e7ce;text-shadow:0 1px 3px rgba(0,0,0,.65);font-size:14px}
+.desk-hourglass-label{color:#ead9bd;font-size:8px;text-shadow:0 1px 3px rgba(0,0,0,.8);letter-spacing:.1px}
+body.study-room-fullscreen #studyRoomPage{overflow:hidden;padding:0!important}
+body.study-room-fullscreen .study-room-panel{height:100dvh;width:100vw;padding:0!important}
+body.study-room-fullscreen .study-room-view{width:100vw;height:100dvh;min-height:0!important;border-radius:0!important;padding:clamp(12px,2.2vw,26px);overflow:hidden}
+@media(orientation:landscape){
+ body.study-room-fullscreen .study-room-view{min-height:100dvh}
+ body.study-room-fullscreen .study-window{inset:10% 12% 27%;border-width:12px}
+ body.study-room-fullscreen .room-desk-scene{height:37%;bottom:6%;left:0;right:0}
+ body.study-room-fullscreen .desk-hourglass{right:24%;top:-4%;transform:scale(1.12);transform-origin:bottom center}
+ body.study-room-fullscreen .study-room-bottom{align-items:flex-end}
+}
+@media(orientation:portrait){
+ body.study-room-fullscreen #studyRoomPage:after{content:"端末を横向きにすると、書斎が画面いっぱいに広がります";position:fixed;z-index:100;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:90vw;text-align:center;padding:9px 14px;border-radius:20px;background:rgba(25,31,35,.72);color:#fff;font-size:11px;backdrop-filter:blur(8px);pointer-events:none}
+}
+@media(prefers-reduced-motion:reduce){.desk-hourglass .hourglass-art.is-running .hourglass-stream{animation:none}}
+
+/* FOCUS visual refinement — calm hierarchy, clear touch targets */
+:root{--radius-card:22px}
+body{letter-spacing:.01em;-webkit-tap-highlight-color:transparent}
+main{gap:18px}
+header{min-height:42px;margin-bottom:2px}
+.brand{font-size:22px;letter-spacing:2.4px}
+.status{font-size:0;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent);opacity:.9}
+.panel{border-radius:22px;padding:18px}
+.page{gap:14px}
+h2{font-size:14px;letter-spacing:.02em;margin-bottom:12px}
+.muted{line-height:1.65}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mode,.secondary,.primary{min-height:46px;border-radius:14px;font-size:13px;transition:background .18s,border-color .18s,transform .12s}
+.mode{padding:12px 6px}
+.mode.active{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent)}
+.primary{min-width:136px;min-height:50px;padding:13px 22px;font-size:14px}
+.secondary{padding:12px 16px}
+.controls{gap:10px}
+.controls #largeToggle{flex-basis:100%;max-width:220px;min-height:40px;margin:2px auto 0;font-size:12px}
+.timer{width:min(70vw,280px);margin:22px auto 16px}
+.clock{font-size:clamp(58px,16vw,78px);letter-spacing:-2.5px}
+.mode-label{font-size:12px;letter-spacing:.04em}
+.hint{font-size:11px;line-height:1.7;margin:12px 0 0}
+.small-settings{min-height:40px;min-width:44px;padding:8px 14px;font-size:12px;border-radius:13px}
+.timer-page-tools{margin:0 0 0}
+.tabbar{padding:8px 10px calc(8px + env(safe-area-inset-bottom));gap:5px}
+.tab{min-height:54px;padding:7px 2px;font-size:10px;border-radius:13px;gap:4px}
+.tab span{font-size:19px;line-height:1}
+.stats{gap:7px}
+.stat{padding:13px 4px;border-radius:15px}
+.stat strong{font-size:22px}
+.stat span{font-size:10px;line-height:1.4;display:block;margin-top:3px}
+.week-chart{height:136px}
+.calendar-cell{min-height:44px}
+.calendar-head button{width:42px;height:42px;font-size:20px}
+.history-actions button{min-height:38px;padding:8px 12px;font-size:11px}
+.theme-choice,.mark-choice{min-height:46px;border-radius:14px}
+.import-label{min-height:46px;display:flex;align-items:center;justify-content:center;border-radius:14px}
+details summary{min-height:26px;display:flex;align-items:center}
+.study-room-panel{padding:8px;background:transparent;border:0}
+.study-room-view{border-radius:20px;padding:16px}
+.study-room-kicker{display:none}
+.room-text-toggle{width:40px;height:40px;min-width:40px;border-radius:50%;font-size:13px}
+.room-exit{width:40px;height:40px;min-width:40px;border-radius:50%;font-size:20px}
+.study-room-weather{height:40px;min-height:40px;padding:0 12px;border-radius:22px;font-size:11px;max-width:180px}
+.study-room-top-actions{gap:8px}
+.study-room-title{font-size:20px;letter-spacing:1.5px}
+.study-room-bottom{align-items:flex-end}
+.study-room-note{font-size:11px;line-height:1.7}
+.desk-hourglass{touch-action:pan-x pan-y}
+#toast:empty{display:none}
+.foot{display:none}
+.room-controls{display:none}
+@media(max-width:390px){
+ main{padding-left:13px;padding-right:13px;gap:14px}
+ .panel{padding:15px;border-radius:19px}
+ .controls{gap:7px}
+ .controls .secondary{padding:10px 12px}
+ .primary{min-width:122px}
+ .timer{width:min(72vw,260px)}
+ .tabbar{gap:2px;padding-left:5px;padding-right:5px}
+ .tab{font-size:9px}
+ .study-room-view{padding:12px}
+ .study-room-weather{max-width:135px;font-size:10px}
+}
+@media(min-width:700px){
+ main{max-width:560px}
+ .panel{padding:20px}
+}
+@media(orientation:landscape) and (max-height:520px){
+ main{padding-top:10px}
+ body:not(.study-room-fullscreen):not(.timer-large-mode) .timer{width:min(34vw,210px);margin:8px auto}
+ body:not(.study-room-fullscreen):not(.timer-large-mode) .clock{font-size:54px}
+ body:not(.study-room-fullscreen):not(.timer-large-mode) #timerPanel{padding:13px}
+ body:not(.study-room-fullscreen):not(.timer-large-mode) .hint{margin-top:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+
+/* Added focus refinements */
+.timer-near-end .progress{stroke:#d7a36f;filter:drop-shadow(0 0 5px rgba(215,163,111,.22))}
+.timer-midpoint .progress{filter:drop-shadow(0 0 4px color-mix(in srgb,var(--accent) 35%,transparent))}
+.analytics-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}
+.analytics-switch button{padding:9px 5px}.analytics-switch button.selected,.sound-controls button.selected{background:var(--accent2);border-color:var(--accent);color:var(--text)}
+.analytics-total{display:flex;align-items:baseline;gap:8px;margin:10px 0 12px}.analytics-total strong{font-size:30px;color:var(--accent);font-variant-numeric:tabular-nums}.analytics-total span{font-size:11px;color:var(--muted)}
+.analytics-bars{height:160px;display:flex;align-items:stretch;gap:4px;border-bottom:1px solid var(--line);padding:4px 0 0;overflow:hidden}
+.analytics-bar-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;font-size:9px;color:var(--muted)}
+.analytics-bar-col>span{height:12px;white-space:nowrap;font-size:8px}.analytics-bar-col>i{height:105px;width:min(100%,18px);display:flex;align-items:flex-end;background:var(--surface-deep);border-radius:6px;overflow:hidden}.analytics-bar-col>i>b{display:block;width:100%;background:var(--accent);border-radius:5px 5px 1px 1px}.analytics-bar-col small{height:24px;white-space:nowrap;font-size:8px;writing-mode:horizontal-tb}
+.season-spring .room-plant i{background:#9bbf91}.season-summer .room-plant i{background:#6e9b65}.season-autumn .room-plant i{background:#b98b5b}.season-winter .room-plant i{background:#91a9a0}
+@media(max-width:380px){.analytics-bars{gap:2px}.analytics-bar-col>span{font-size:7px}.analytics-bar-col small{font-size:7px}}
+
+
+
+
+/* iPhone safe-area correction for immersive study room */
+@supports (padding: max(0px)) {
+ body.study-room-fullscreen #studyRoomPage{
+  inset:0;
+  padding-top:max(env(safe-area-inset-top,0px), 56px);
+  padding-bottom:max(env(safe-area-inset-bottom,0px), 20px);
+  padding-left:env(safe-area-inset-left,0px);
+  padding-right:env(safe-area-inset-right,0px);
+  overflow:hidden;
+ }
+ body.study-room-fullscreen .study-room-panel{
+  height:100%;
+  min-height:0;
+  padding:0 8px;
+  box-sizing:border-box;
+ }
+ body.study-room-fullscreen .study-room-view{
+  height:100%;
+  min-height:0;
+  box-sizing:border-box;
+  padding:14px 14px 12px;
+  border-radius:18px;
+ }
+ body.study-room-fullscreen .study-room-top{
+  flex-shrink:0;
+  padding-top:0;
+ }
+}
+@media(max-width:520px){
+ body.study-room-fullscreen .study-room-top-actions{
+  max-width:72%;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+ }
+ body.study-room-fullscreen .study-room-title{
+  font-size:clamp(16px,4.5vw,20px);
+ }
+}
+
+
+/* Home Screen PWA: reserve a fixed top band for the iOS status/notch area */
+@media (display-mode: standalone) {
+ body.study-room-fullscreen #studyRoomPage{
+  padding-top:max(env(safe-area-inset-top,0px), 72px) !important;
+  padding-bottom:max(env(safe-area-inset-bottom,0px), 28px) !important;
+ }
+ body.study-room-fullscreen .study-room-panel{
+  padding-top:0 !important;
+ }
+ body.study-room-fullscreen .study-room-view{
+  padding-top:22px !important;
+ }
+}
+@supports (-webkit-touch-callout:none) {
+ @media (display-mode: standalone) {
+  body.study-room-fullscreen #studyRoomPage{
+   padding-top:max(env(safe-area-inset-top,0px), 72px) !important;
+  }
+ }
+}
+
+
+/* Landscape composition: enlarge the notch-safe side margins only in landscape */
+@media (orientation:landscape) {
+ body.study-room-fullscreen #studyRoomPage{
+  padding-left:max(env(safe-area-inset-left,0px), 76px) !important;
+  padding-right:max(env(safe-area-inset-right,0px), 76px) !important;
+  padding-top:max(env(safe-area-inset-top,0px), 18px) !important;
+  padding-bottom:max(env(safe-area-inset-bottom,0px), 18px) !important;
+ }
+ body.study-room-fullscreen .study-room-panel{padding:0 8px !important}
+ body.study-room-fullscreen .study-room-view{
+  width:100% !important;
+  padding:clamp(18px,2.5vw,30px) !important;
+  border-radius:20px !important;
+ }
+ body.study-room-fullscreen .study-window{inset:9% 11% 28% !important}
+ body.study-room-fullscreen .room-desk-scene{left:0;right:0;bottom:5%;height:39%}
+ body.study-room-fullscreen .desk-hourglass{right:23%;transform:scale(1.2);transform-origin:bottom center}
+}
+@media (orientation:landscape) and (max-height:520px) {
+ body.study-room-fullscreen .study-room-view{padding-top:22px !important;padding-bottom:18px !important}
+ body.study-room-fullscreen .study-room-top{min-height:40px}
+ body.study-room-fullscreen .study-room-bottom{min-height:34px}
+}
+
+/* A more crafted, warm study desk: wood grain, brass, linen, ceramic and paper */
+.desk-surface{
+ background:
+  repeating-linear-gradient(2deg,transparent 0 9px,rgba(255,226,184,.055) 10px,transparent 11px 18px),
+  linear-gradient(180deg,#c49a70 0%,#98704e 18%,#745039 52%,#4a3326 100%) !important;
+ border-top:4px solid rgba(244,211,166,.82) !important;
+ box-shadow:0 -2px 0 rgba(255,241,213,.22),0 -12px 30px rgba(0,0,0,.22),0 18px 28px rgba(0,0,0,.34) !important;
+}
+.desk-surface:after{
+ content:"";position:absolute;left:5%;right:5%;top:12%;height:1px;
+ background:linear-gradient(90deg,transparent,rgba(255,231,194,.36),transparent);
+}
+.desk-front{
+ background:linear-gradient(90deg,#3b281f 0%,#79563c 18%,#5a3e2d 50%,#805b3d 82%,#38251d 100%) !important;
+ box-shadow:inset 0 3px 5px rgba(255,220,177,.15),0 14px 22px rgba(0,0,0,.32);
+}
+.desk-books{gap:3px;transform:rotate(-3deg) translateY(-2px)}
+.desk-books i{
+ width:18px;border-radius:3px 3px 1px 1px;
+ border:1px solid rgba(255,232,194,.22);
+ box-shadow:inset 3px 0 4px rgba(255,255,255,.14),inset -3px 0 4px rgba(0,0,0,.18),2px 3px 5px rgba(0,0,0,.3);
+}
+.desk-books i:after{
+ content:"";display:block;width:3px;height:72%;margin:6px auto 0;
+ border-left:1px solid rgba(245,221,181,.35);border-right:1px solid rgba(0,0,0,.12);
+}
+.desk-lamp:before{width:6px;background:linear-gradient(90deg,#5b432c,#e0c28a 48%,#80603d)}
+.desk-lamp:after{
+ background:linear-gradient(180deg,#f1dfb5 0%,#c6a36d 54%,#806044 100%);
+ border:1px solid rgba(255,239,202,.55);
+ filter:drop-shadow(0 0 12px rgba(255,218,151,.42));
+}
+.desk-lamp i{background:linear-gradient(180deg,#e0c18a,#80613d);box-shadow:0 2px 5px rgba(0,0,0,.28)}
+.room-plant:before{
+ background:linear-gradient(90deg,#72513b,#d4b08a 48%,#805c42);
+ box-shadow:inset 0 2px 3px rgba(255,239,208,.5),0 3px 5px rgba(0,0,0,.25);
+}
+.room-plant:after{
+ content:"";position:absolute;bottom:5px;left:8px;width:25px;height:2px;
+ background:rgba(245,220,183,.4);border-radius:50%;
+}
+.desk-hourglass .hourglass-art{filter:drop-shadow(0 3px 5px rgba(0,0,0,.28)) drop-shadow(0 0 7px rgba(238,210,159,.12))}
+.hourglass-frame{stroke:#c5a36c;stroke-width:4.4}
+.hourglass-glass{fill:rgba(222,235,231,.16);stroke:rgba(239,229,201,.78);stroke-width:1.2}
+.hourglass-sand-top,.hourglass-sand-bottom{fill:#e4c58b}
+.desk-notebook{
+ position:absolute;z-index:7;left:34%;top:39%;width:68px;height:42px;
+ transform:rotate(-7deg);border-radius:3px 5px 5px 3px;
+ background:linear-gradient(100deg,#d7c5a2,#f0e4c9 18%,#c7b18b 100%);
+ box-shadow:2px 4px 7px rgba(0,0,0,.3),inset 3px 0 0 rgba(115,83,53,.35);
+}
+.desk-notebook i{
+ position:relative;display:block;height:1px;margin:8px 8px 0 14px;
+ background:rgba(111,91,68,.34);
+}
+.desk-notebook i:first-child{margin-top:11px}
+.desk-inkwell{
+ position:absolute;z-index:8;left:57%;top:35%;width:20px;height:22px;
+ border-radius:5px 5px 7px 7px;
+ background:linear-gradient(90deg,#182b31,#526a70 48%,#182a30);
+ border:1px solid rgba(226,211,173,.65);
+ box-shadow:0 4px 7px rgba(0,0,0,.35);
+}
+.desk-inkwell:before{
+ content:"";position:absolute;left:4px;top:-5px;width:10px;height:6px;
+ border-radius:3px 3px 1px 1px;background:linear-gradient(90deg,#9b784c,#e1c18b,#8b6941);
+}
+.desk-inkwell i{
+ position:absolute;left:8px;top:-17px;width:2px;height:18px;
+ background:linear-gradient(#d8c18e,#725637);transform:rotate(8deg);
+}
+@media(prefers-reduced-motion:no-preference){
+ .desk-lamp:after{animation:lamp-warmth 5s ease-in-out infinite alternate}
+ @keyframes lamp-warmth{from{filter:drop-shadow(0 0 10px rgba(255,218,151,.28))}to{filter:drop-shadow(0 0 17px rgba(255,218,151,.52))}}
+}
+@media(prefers-reduced-motion:reduce){.desk-lamp:after{animation:none}}
+
+
+/* More frequent, layered motion beyond the study-room window */
+.room-cloud{animation-duration:19s!important}.room-cloud.cloud-two{animation-duration:25s!important}
+.room-birds{animation-duration:10s!important}
+.room-birds-extra{transform-box:fill-box;animation:room-birds-sweep 12s ease-in-out infinite alternate}
+.room-mountains{animation-duration:7s!important}.room-river{animation-duration:2.8s!important}
+.room-woodland{animation-duration:3.8s!important}.room-woodland circle:nth-child(2n){animation-duration:2.4s!important}
+.room-floating-petals{animation-duration:7s!important}.room-floating-petals ellipse{animation-duration:4.5s!important}
+.room-butterfly{transform-box:fill-box;transform-origin:center;animation:room-butterfly-flight 7s ease-in-out infinite alternate}
+.butterfly-two{animation-duration:9s;animation-delay:-4s}
+.room-fireflies circle{animation:room-firefly-glow 3s ease-in-out infinite alternate}
+.room-fireflies circle:nth-child(2n){animation-delay:-1.2s;animation-duration:4s}
+.room-fireflies circle:nth-child(3n){animation-delay:-2.1s}
+.room-river-glints{animation:room-glints 2.4s ease-in-out infinite alternate}
+.room-meadow-grass{transform-box:fill-box;transform-origin:bottom;animation:room-grass-sway 3.2s ease-in-out infinite alternate}
+@keyframes room-birds-sweep{from{translate:-12px 4px}to{translate:22px -12px}}
+@keyframes room-butterfly-flight{0%{translate:-8px 5px;rotate:-9deg}50%{translate:10px -15px;rotate:8deg}100%{translate:22px -3px;rotate:-4deg}}
+@keyframes room-firefly-glow{from{opacity:.2;filter:drop-shadow(0 0 1px #fff1b9)}to{opacity:1;filter:drop-shadow(0 0 9px #fff1b9)}}
+@keyframes room-glints{from{opacity:.25;translate:-8px 1px}to{opacity:.95;translate:10px -2px}}
+@keyframes room-grass-sway{from{transform:skewX(-5deg)}to{transform:skewX(6deg)}}
+@media(prefers-reduced-motion:reduce){.room-birds-extra,.room-butterfly,.room-fireflies circle,.room-river-glints,.room-meadow-grass{animation:none!important}}
+/* Only a small stack of books remains on the desk */
+.room-desk-scene .desk-books{position:absolute;z-index:8;left:42%;top:28%;display:flex;align-items:flex-end;gap:3px;transform:rotate(-2deg);filter:drop-shadow(0 5px 5px rgba(0,0,0,.3))}
+.room-desk-scene .desk-books i{display:block;width:27px;height:42px;border-radius:3px 4px 2px 2px;border:1px solid rgba(255,232,194,.32);background:linear-gradient(90deg,#435b50,#799078 42%,#34483f);box-shadow:inset 3px 0 4px rgba(255,255,255,.14),inset -3px 0 4px rgba(0,0,0,.2)}
+.room-desk-scene .desk-books i:nth-child(2){height:48px;background:linear-gradient(90deg,#80543f,#bd8960 42%,#684333);transform:rotate(3deg)}
+.room-desk-scene .desk-books i:nth-child(3){height:39px;background:linear-gradient(90deg,#4c526b,#8585a4 42%,#3d4159);transform:rotate(-2deg)}
+.room-desk-scene .desk-books i:nth-child(4){height:44px;background:linear-gradient(90deg,#a18b5e,#d2bb83 42%,#806b47);transform:rotate(2deg)}
+.room-desk-scene .desk-books i:after{content:"";display:block;height:1px;margin:8px 4px 0;background:rgba(248,231,194,.55);box-shadow:0 3px rgba(248,231,194,.18)}
+.room-window-shelf{position:absolute;z-index:9;left:5%;bottom:calc(7% + 30px);width:84px;height:10px;border-radius:2px;background:linear-gradient(180deg,#d1ae7f,#805b3d);box-shadow:0 4px 8px rgba(0,0,0,.3),inset 0 1px rgba(255,239,210,.55)}
+.room-hourglass-shelf{position:absolute!important;right:4px!important;top:-83px!important;left:auto!important;transform:scale(.66)!important;transform-origin:bottom right!important}
+.room-window-shelf .desk-hourglass-time,.room-window-shelf .desk-hourglass-label{display:none}
+@media(orientation:landscape){.room-window-shelf{left:7%;bottom:calc(5% + 24px)}.room-hourglass-shelf{top:-88px!important;transform:scale(.72)!important}}
+
+
+
+/* Geometry redesign: arched observatory window and sculpted valley */
+.study-window{inset:14% 7% 30%!important;border-radius:48% 48% 9px 9px/15% 15% 7px 7px!important;border:11px solid #bca77e!important;border-image:none!important;box-shadow:0 0 0 2px rgba(248,231,190,.58),0 0 0 7px rgba(33,51,65,.78),inset 0 0 0 2px rgba(255,248,222,.36),0 24px 48px rgba(0,0,0,.42),0 0 44px rgba(169,218,238,.2)!important}
+.study-window:before{border-radius:inherit;background:radial-gradient(ellipse at 50% 4%,rgba(255,245,216,.2),transparent 42%),linear-gradient(115deg,rgba(255,255,255,.12),transparent 28% 70%,rgba(255,226,181,.1))!important}
+.study-window-cross{border-radius:inherit;background:linear-gradient(90deg,transparent 49.55%,rgba(57,49,43,.78) 49.8% 50.2%,transparent 50.45%),linear-gradient(0deg,transparent 49.55%,rgba(57,49,43,.78) 49.8% 50.2%,transparent 50.45%),linear-gradient(34deg,transparent 49.7%,rgba(57,49,43,.42) 49.9% 50.1%,transparent 50.3%),linear-gradient(-34deg,transparent 49.7%,rgba(57,49,43,.42) 49.9% 50.1%,transparent 50.3%)!important}
+.room-landscape{filter:saturate(1.04) contrast(1.03)!important}.room-mountains{filter:drop-shadow(0 8px 14px rgba(42,67,78,.16))}.room-river{filter:drop-shadow(0 0 9px rgba(219,246,246,.28))}.room-meadow{filter:saturate(1.12)}
+.room-desk-scene .desk-surface{clip-path:polygon(0 0,100% 0,97% 100%,3% 100%)}.room-desk-scene .desk-front{clip-path:polygon(3% 0,97% 0,88% 100%,12% 100%)!important}
+@media(max-width:520px){.study-window{inset:17% 3% 33%!important;border-width:8px!important}}
+@media(orientation:landscape){body.study-room-fullscreen .study-window{inset:10% 12% 27%!important}}
+/* Ethereal sky-inspired visual language: luminous, quiet, celestial */
+.study-room-view{
+ --sky1:#8bb9ce;--sky2:#e8c9c0;--land:#526f69;
+ color:#fff8e9;
+ background:
+  radial-gradient(ellipse at 50% 2%,rgba(255,239,205,.22),transparent 42%),
+  radial-gradient(ellipse at 12% 90%,rgba(105,155,164,.22),transparent 44%),
+  linear-gradient(155deg,#172c40 0%,#34485a 42%,#202f3a 100%);
+ border:1px solid rgba(239,224,194,.38);
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 0 60px rgba(8,21,37,.35),0 22px 55px rgba(0,0,0,.38);
+}
+.study-room-view:before{
+ content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:
+  radial-gradient(1.5px 1.5px at 8% 18%,rgba(255,246,219,.9) 98%,transparent),
+  radial-gradient(2px 2px at 19% 34%,rgba(255,246,219,.72) 98%,transparent),
+  radial-gradient(1px 1px at 31% 12%,rgba(255,246,219,.8) 98%,transparent),
+  radial-gradient(1.5px 1.5px at 77% 16%,rgba(255,246,219,.8) 98%,transparent),
+  radial-gradient(2px 2px at 89% 38%,rgba(255,246,219,.68) 98%,transparent),
+  radial-gradient(1px 1px at 68% 48%,rgba(255,246,219,.8) 98%,transparent),
+  radial-gradient(ellipse at 50% 0%,rgba(255,230,190,.12),transparent 62%);
+ opacity:.75;
+}
+.study-room-view:after{
+ content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+ background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 25% 72%,rgba(255,222,177,.07));
+ mix-blend-mode:screen;
+}
+.study-room-top,.study-room-bottom{z-index:10}
+.study-room-kicker{color:#e8d9c1;letter-spacing:3px;text-shadow:0 1px 10px rgba(0,0,0,.25)}
+.study-room-clock{color:#fff4df;text-shadow:0 0 18px rgba(255,224,172,.38),0 2px 12px rgba(0,0,0,.25);font-weight:300;letter-spacing:2px}
+.study-room-date{color:rgba(255,244,223,.78)}
+.study-window{
+ border:10px solid transparent;
+ border-image:linear-gradient(135deg,#e4c99a,#6f6a65 24%,#c9b18a 48%,#555b60 72%,#d9c397) 1;
+ box-shadow:0 0 0 1px rgba(255,239,204,.65),0 0 0 5px rgba(38,53,62,.7),0 0 36px rgba(170,214,231,.18),0 22px 46px rgba(0,0,0,.42);
+}
+.study-window:before{background:linear-gradient(180deg,rgba(255,255,255,.12),transparent 36%,rgba(255,236,195,.1)),radial-gradient(ellipse at 50% 100%,rgba(255,255,255,.2),transparent 56%)}
+.study-window-glow{opacity:.9;filter:blur(1px)}
+.room-sun-glow{filter:blur(4px);opacity:.8}
+.room-sun-disc{filter:drop-shadow(0 0 15px rgba(255,235,190,.7))}
+.room-cloud{filter:drop-shadow(0 4px 8px rgba(34,60,76,.12))}
+.room-birds-extra,.room-butterflies{filter:drop-shadow(0 0 5px rgba(255,244,215,.55))}
+.room-fireflies{filter:drop-shadow(0 0 8px rgba(255,232,167,.75))}
+.room-river-glints{filter:drop-shadow(0 0 5px rgba(218,245,255,.65))}
+.room-desk-scene .desk-surface{
+ background:linear-gradient(180deg,#b99b79 0%,#88694f 18%,#584332 100%);
+ border-top:2px solid rgba(255,229,187,.72);
+ box-shadow:0 -8px 32px rgba(255,218,168,.12),0 18px 28px rgba(0,0,0,.4);
+}
+.room-desk-scene .desk-front{
+ background:linear-gradient(90deg,#302b2c,#725644 22%,#493a35 52%,#7a604a 80%,#2d292a);
+}
+.room-desk-scene .desk-books i{
+ border-color:rgba(255,237,204,.55);
+ box-shadow:inset 3px 0 5px rgba(255,255,255,.22),inset -3px 0 5px rgba(0,0,0,.22),0 2px 5px rgba(0,0,0,.22);
+}
+.room-window-shelf{
+ background:linear-gradient(180deg,#ead5ad,#9d7953 48%,#5d4636);
+ box-shadow:0 0 0 1px rgba(255,238,204,.32),0 5px 12px rgba(0,0,0,.4),0 0 18px rgba(255,221,170,.16);
+}
+.study-room-top-actions button,.study-room-top-actions .secondary{
+ border-color:rgba(238,222,190,.36);
+ background:rgba(22,39,51,.42);
+ color:#fff4df;
+ backdrop-filter:blur(8px);
+}
+@media(prefers-reduced-motion:no-preference){
+ .study-room-view:before{animation:sky-stardust 9s ease-in-out infinite alternate}
+ .study-window{animation:window-luminous-breathe 8s ease-in-out infinite alternate}
+ @keyframes sky-stardust{from{opacity:.48}to{opacity:.92}}
+ @keyframes window-luminous-breathe{from{box-shadow:0 0 0 1px rgba(255,239,204,.55),0 0 0 5px rgba(38,53,62,.7),0 0 25px rgba(170,214,231,.12),0 22px 46px rgba(0,0,0,.42)}to{box-shadow:0 0 0 1px rgba(255,239,204,.8),0 0 0 5px rgba(38,53,62,.7),0 0 44px rgba(170,214,231,.26),0 22px 46px rgba(0,0,0,.42)}}
+}
+@media(prefers-reduced-motion:reduce){.study-room-view:before,.study-window{animation:none!important}}
+
+
+/* A quiet picture-book cosmos: a small world seen from afar */
+.little-planet-view{
+ position:relative;isolation:isolate;overflow:hidden;
+ min-height:clamp(540px,76svh,760px)!important;
+ background:linear-gradient(180deg,#111b3b,#303b61 58%,#746b80)!important;
+ border:1px solid rgba(238,218,192,.3)!important;
+ box-shadow:inset 0 0 80px rgba(7,13,36,.35),0 24px 60px rgba(0,0,0,.3)!important;
+}
+.little-planet-view:before{
+ content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:radial-gradient(ellipse at 50% 38%,transparent 28%,rgba(9,15,39,.28) 100%),linear-gradient(180deg,rgba(11,18,44,.14),transparent 35%,rgba(17,20,44,.1));
+}
+.little-planet-view:after{
+ content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.3;
+ background-image:radial-gradient(rgba(255,244,221,.6) .7px,transparent .9px);
+ background-size:47px 53px;
+ mask-image:linear-gradient(180deg,#000,transparent 88%);
+}
+.little-planet-view .study-room-top,.little-planet-view .study-room-bottom{position:relative;z-index:5}
+.little-planet-view .study-room-title{color:#f8ead4;text-shadow:0 2px 16px rgba(10,15,40,.6);font-weight:400;letter-spacing:.12em}
+.little-planet-view .study-room-kicker{color:#d9c9c5;font-size:9px;letter-spacing:.22em}
+.little-planet-view .study-room-season,.little-planet-view .study-room-date{color:#e4d8d0}
+.little-planet-view .study-room-clock{color:#fff0d8;text-shadow:0 0 20px rgba(255,223,180,.3);font-weight:300}
+.little-planet-view .study-room-foot{color:rgba(232,218,205,.55);letter-spacing:.18em;font-size:9px}
+.little-planet-scene{
+ position:absolute!important;inset:0!important;overflow:hidden!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:transparent!important;
+}
+.little-planet-scene:before,.little-planet-scene:after{display:none!important}
+.planet-landscape{position:absolute;inset:0;width:100%;height:100%;display:block;filter:saturate(.88) contrast(1.02)}
+.planet-hourglass{
+ position:absolute!important;z-index:7;right:22px!important;bottom:74px!important;left:auto!important;top:auto!important;
+ width:70px;height:82px;border-radius:48% 48% 12px 12px;
+ background:linear-gradient(180deg,rgba(244,224,200,.16),rgba(105,103,130,.2))!important;
+ border:1px solid rgba(255,235,209,.24);
+ box-shadow:0 0 25px rgba(248,222,192,.12),inset 0 0 16px rgba(255,255,255,.08);
+ backdrop-filter:blur(8px);
+}
+.planet-hourglass .room-hourglass-shelf{position:absolute!important;top:-12px!important;right:5px!important;transform:scale(.54)!important;transform-origin:top right!important}
+.planet-hourglass .desk-hourglass-time,.planet-hourglass .desk-hourglass-label{display:none!important}
+.little-planet-view .study-room-bottom{margin-top:auto;padding-top:0}
+.little-planet-view .study-room-note{position:relative;z-index:5;color:rgba(245,230,214,.7);font-size:12px;letter-spacing:.08em;text-shadow:0 2px 10px rgba(12,17,39,.7)}
+.starfield circle,.star-crosses{animation:star-twinkle 4.5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+.starfield circle:nth-child(3n){animation-delay:-2.1s}
+.starfield circle:nth-child(4n){animation-delay:-3.2s}
+.nebula-one{transform-origin:30% 35%;animation:nebula-breathe 18s ease-in-out infinite alternate}
+.nebula-two{transform-origin:80% 40%;animation:nebula-breathe 22s ease-in-out infinite alternate-reverse}
+.far-planet-one{transform-origin:170px 365px;animation:planet-drift 26s ease-in-out infinite alternate}
+.far-planet-two{transform-origin:820px 235px;animation:planet-drift 34s ease-in-out infinite alternate-reverse}
+.distant-sun-glow{animation:sun-breathe 9s ease-in-out infinite alternate}
+.comet-trail{animation:comet-fade 12s ease-in-out infinite}
+.solitary-tree{transform-origin:650px 490px;animation:tree-sway 7s ease-in-out infinite alternate}
+.tiny-flower{transform-origin:745px 535px;animation:flower-sway 4s ease-in-out infinite alternate}
+.world-fireflies circle{animation:firefly 3.5s ease-in-out infinite alternate}
+.world-fireflies circle:nth-child(2){animation-delay:-1.2s}
+.world-fireflies circle:nth-child(3){animation-delay:-2.3s}
+.orbiting-dust{animation:orbit-drift 30s linear infinite;transform-origin:555px 350px}
+@keyframes star-twinkle{from{opacity:.35}to{opacity:1}}
+@keyframes nebula-breathe{from{transform:scale(.94) translateX(-8px);opacity:.65}to{transform:scale(1.08) translateX(12px);opacity:1}}
+@keyframes planet-drift{from{transform:translate(0,0)}to{transform:translate(12px,-9px)}}
+@keyframes sun-breathe{from{opacity:.55;transform:scale(.92)}to{opacity:1;transform:scale(1.08)}}
+@keyframes comet-fade{0%,72%,100%{opacity:0}78%,90%{opacity:1}}
+@keyframes tree-sway{from{transform:rotate(-1.8deg)}to{transform:rotate(1.8deg)}}
+@keyframes flower-sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+@keyframes firefly{from{opacity:.2;transform:scale(.7)}to{opacity:1;transform:scale(1.45)}}
+@keyframes orbit-drift{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media(max-width:520px){
+ .little-planet-view{min-height:clamp(540px,75svh,760px)!important}
+ .planet-hourglass{right:12px!important;bottom:74px!important;transform:scale(.86);transform-origin:bottom right}
+ .little-planet-view .study-room-kicker{display:none}
+ .little-planet-view .study-room-title{font-size:18px}
+ .little-planet-view .study-room-top-actions{gap:5px}
+ .little-planet-view .study-room-weather{max-width:92px;font-size:10px}
+}
+@media(orientation:landscape){
+ .little-planet-view{min-height:100%!important}
+ .planet-hourglass{bottom:52px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .starfield circle,.star-crosses,.nebula-one,.nebula-two,.far-planet-one,.far-planet-two,.distant-sun-glow,.comet-trail,.solitary-tree,.tiny-flower,.world-fireflies circle,.orbiting-dust{animation:none!important}
+}
+
+ 
+/* True edge-to-edge landscape canvas on the immersive room */
+@media(orientation:landscape){
+ body.study-room-fullscreen #studyRoomPage{inset:0!important;width:100vw;height:100dvh;padding:0!important;overflow:hidden!important}
+ body.study-room-fullscreen .study-room-panel{position:absolute;inset:0;width:100vw;height:100dvh;padding:0!important;margin:0!important}
+ body.study-room-fullscreen .little-planet-view{position:absolute;inset:0;width:100vw;height:100dvh;min-height:0!important;border:0!important;border-radius:0!important;padding:clamp(12px,2.1vw,28px)!important}
+ body.study-room-fullscreen .planet-landscape,body.study-room-fullscreen .cosmic-motion,body.study-room-fullscreen .earned-sky{position:absolute;inset:0;width:100%;height:100%}
+ body.study-room-fullscreen .study-room-top{padding-top:max(4px,env(safe-area-inset-top));padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right))}
+ body.study-room-fullscreen .study-room-bottom{padding-bottom:max(4px,env(safe-area-inset-bottom))}
+ body.study-room-fullscreen .planet-hourglass{bottom:clamp(18px,5vh,48px)!important;right:clamp(18px,4vw,48px)!important}
+}
+/* Daily study time gently reveals more of the night sky */
+.earned-sky{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}
+.earned-milkyway,.earned-star-dust,.earned-meteors{opacity:0;transition:opacity 2.4s ease}
+.sky-level-1 .earned-star-dust{opacity:.3}
+.sky-level-2 .earned-star-dust{opacity:.65}
+.sky-level-2 .earned-milkyway{opacity:.58}
+.sky-level-3 .earned-star-dust,.sky-level-4 .earned-star-dust{opacity:.9}
+.sky-level-3 .earned-milkyway,.sky-level-4 .earned-milkyway{opacity:.9}
+.earned-meteors{transform-box:view-box;transform-origin:0 0;animation:earned-meteor 18s ease-in-out infinite;filter:drop-shadow(0 0 5px rgba(255,241,211,.7))}
+.sky-level-3 .earned-meteors{opacity:.9;animation-duration:18s}
+.sky-level-4 .earned-meteors{opacity:1;animation-duration:8s}
+.sky-progress-label{position:absolute;z-index:6;right:20px;bottom:83px;color:rgba(245,232,220,.78);font-size:10px;letter-spacing:.12em;text-shadow:0 1px 9px rgba(12,18,44,.8);pointer-events:none;transition:opacity .5s}
+.little-planet-view.room-quiet-text .sky-progress-label{display:none}
+@keyframes earned-meteor{
+  0%,8%,100%{opacity:0;transform:translate(82vw,8vh) rotate(24deg)}
+  12%{opacity:1}
+  24%{opacity:0;transform:translate(48vw,38vh) rotate(24deg)}
+}
+@media(max-width:520px){.sky-progress-label{right:14px;bottom:76px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){
+ .earned-milkyway,.earned-star-dust,.earned-meteors{animation:none!important;transition:none!important}
+ .sky-level-3 .earned-meteors,.sky-level-4 .earned-meteors{opacity:.65}
+}
+
+/* Slow celestial breeze and occasional shooting stars */
+.cosmic-motion{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible}
+.wind-ribbons{opacity:0;animation:cosmic-wind 19s ease-in-out infinite}
+.wind-ribbons path{stroke-dasharray:170 95;animation:wind-flow 13s linear infinite}
+.wind-ribbons path:nth-child(2){animation-duration:17s;animation-delay:-5s}
+.wind-ribbons path:nth-child(3){animation-duration:21s;animation-delay:-9s}
+.wind-dust{opacity:0;animation:dust-drift 16s ease-in-out infinite}
+.shooting-star{opacity:0;transform-box:view-box;transform-origin:0 0;filter:drop-shadow(0 0 5px rgba(255,239,207,.7))}
+.shooting-star-one{animation:shooting-one 17s ease-in-out infinite 3s}
+.shooting-star-two{animation:shooting-two 23s ease-in-out infinite 11s}
+@keyframes cosmic-wind{
+ 0%,12%,100%{opacity:0;transform:translateX(-7%) translateY(8px)}
+ 28%,68%{opacity:.72}
+ 88%{opacity:0;transform:translateX(8%) translateY(-12px)}
+}
+@keyframes wind-flow{from{stroke-dashoffset:0}to{stroke-dashoffset:-530}}
+@keyframes dust-drift{0%,15%,100%{opacity:0;transform:translate(-12px,10px)}35%,75%{opacity:.65}90%{opacity:0;transform:translate(38px,-18px)}}
+@keyframes shooting-one{
+ 0%,8%{opacity:0;transform:translate(12vw,18vh) rotate(24deg) scale(.65)}
+ 10%{opacity:1}
+ 20%{opacity:0;transform:translate(92vw,48vh) rotate(24deg) scale(1)}
+ 100%{opacity:0;transform:translate(92vw,48vh) rotate(24deg)}
+}
+@keyframes shooting-two{
+ 0%,10%{opacity:0;transform:translate(72vw,5vh) rotate(145deg) scale(.55)}
+ 12%{opacity:.85}
+ 21%{opacity:0;transform:translate(28vw,38vh) rotate(145deg) scale(.9)}
+ 100%{opacity:0;transform:translate(28vw,38vh) rotate(145deg)}
+}
+@media(prefers-reduced-motion:reduce){
+ .cosmic-motion .wind-ribbons,.cosmic-motion .wind-dust,.cosmic-motion .shooting-star{animation:none!important;opacity:0!important}
+}
+
+.recovery-list{display:grid;gap:12px;margin-top:12px}.recovery-item{padding:12px;border:1px solid var(--border);border-radius:12px}.recovery-item strong{display:block}.recovery-item p{margin:6px 0 10px}.recovery-actions{display:flex;flex-wrap:wrap;gap:8px}.recovery-actions button{flex:1 1 140px}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="brand">FOCUS<span id="brandMark">●</span></div></div><div class="status" id="status" aria-label="タイマーの状態">●</div></header>
+
+
+<div class="page" id="timerPage">
+<div class="timer-page-tools"><button class="small-settings" type="button" data-page="settingsPage" aria-label="設定を開く">⚙ 設定</button></div>
+<section class="panel" id="timerPanel">
+ <div class="modes"><button class="mode active" data-mode="focus">集中</button><button class="mode" data-mode="short">短い休憩</button><button class="mode" data-mode="long">長い休憩</button></div>
+ <div class="timer"><svg class="ring" viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="88"/><circle class="progress" id="progress" cx="100" cy="100" r="88"/></svg><div style="text-align:center"><div class="clock" id="clock">25:00</div><div class="mode-label" id="modeLabel">集中する時間</div></div></div>
+ <div class="controls"><button class="secondary" id="reset">↺ リセット</button><button class="primary" id="start">▶ スタート</button><button class="secondary" id="skip">次へ →</button><button class="secondary" id="largeToggle" aria-pressed="false">⛶ 大画面</button></div>
+ <p class="hint" id="hint">25分間、ひとつのことに集中しよう。</p>
+</section>
+
+<details class="panel"><summary>環境音を設定</summary><p class="muted" style="margin:12px 0 10px">音を重ねて、自分に合う静かな環境をつくれるよ。音は端末内で生成するよ。</p><div class="muted" style="margin-bottom:7px">プリセット</div><div class="sound-controls"><button class="secondary" data-sound-preset="rainy">雨の窓辺</button><button class="secondary" data-sound-preset="breeze">そよ風</button><button class="secondary" data-sound-preset="quiet">静かな部屋</button><button class="secondary" data-sound-preset="off">オフ</button></div><div class="muted" style="margin:13px 0 7px">音の層（複数選択可）</div><div class="sound-controls"><button class="secondary" data-sound="rain" aria-pressed="false">雨音</button><button class="secondary" data-sound="wind" aria-pressed="false">風</button><button class="secondary" data-sound="noise" aria-pressed="false">ノイズ</button></div><label class="muted" for="soundVolume" style="display:block;margin-top:12px">全体の音量</label><input id="soundVolume" type="range" min="0" max="30" value="10" style="margin:6px 0"></details>
+<details class="panel" id="reflectionPanel"><summary>セッションの振り返り</summary><p class="muted" id="reflectionPrompt" style="margin:12px 0 8px">集中セッションのあと、気づいたことを短く残せるよ。</p><textarea class="field-select" id="reflection" maxlength="500" placeholder="例：思ったより進んだこと、次に取り組むこと…"></textarea><button class="secondary wide" id="saveReflection">振り返りを保存</button></details>
+
+</div>
+<div class="page" id="overviewPage" hidden>
+<section class="panel"><h2>学習の全体像</h2>
+ <div class="stats"><div class="stat"><strong id="sessions">0</strong><span>完了セッション</span></div><div class="stat"><strong id="minutes">0</strong><span>累計集中時間（分）</span></div><div class="stat"><strong id="todayMinutes">0</strong><span>今日の集中時間（分）</span></div></div>
+ <div class="muted" style="display:flex;justify-content:space-between;margin-top:14px"><span>現在のセット</span><span><b id="round">1/4</b> · <span id="setLabel">0 / 4 セッション</span></span></div><div class="progressbar" id="dots"><i></i><i></i><i></i><i></i></div>
+</section>
+<section class="panel">
+ <div class="week-summary"><h2 style="margin:0">週間の学習時間</h2><div class="week-total" id="weekTotal">0分</div></div>
+ <div class="muted" id="weekRange">直近7日間</div>
+ <div class="week-chart" id="weekChart" role="img" aria-label="直近7日間の日別学習時間"></div>
+ <div class="muted" style="margin-top:10px">集中セッションを完了すると、その日の棒グラフに反映されるよ。</div>
+</section>
+<details class="panel"><summary>アチーブメント</summary><p class="muted" style="margin:12px 0 12px">累計の集中時間に応じて記録される達成バッジ。</p><div class="achievement-list" id="achievementList"></div><div class="achievement-next" id="achievementNext"></div></details>
+<section class="panel"><h2>目標の進み具合</h2><div id="goalProgress"></div><p class="muted" style="margin:10px 0 0">目標は設定画面から変更できるよ。達成できない日があっても、また次の日から始めれば大丈夫。</p></section>
+<section class="panel" id="calendarPanel"><div class="calendar-head"><button id="monthPrev" aria-label="前の月">‹</button><h2 id="calendarTitle" style="margin:0">月間カレンダー</h2><button id="monthNext" aria-label="次の月">›</button></div><div class="calendar-grid" id="calendarGrid"></div><p class="muted" style="margin:10px 0 0">丸印が大きい日ほど集中時間が長いよ。</p></section>
+<section class="panel" id="historyPanel"><h2>学習履歴</h2><div class="muted" style="margin:-4px 0 10px">最近の集中セッション。記録の削除や修正もできるよ。</div><input id="historySearch" type="search" placeholder="振り返りの言葉を検索" aria-label="履歴を検索"><label class="muted" style="display:flex;align-items:center;gap:8px;margin:0 0 10px"><input id="reflectionOnly" type="checkbox" style="width:auto;margin:0">振り返りがある記録だけ表示</label><div class="history-list" id="historyList"></div></section>
+<section class="panel" id="analyticsPanel"><h2>学習分析</h2><div class="muted" style="margin:-4px 0 10px">日・週・月ごとの記録を、静かに振り返るための集計。</div><div class="analytics-switch"><button class="secondary selected" data-analytics-range="day">日</button><button class="secondary" data-analytics-range="week">週</button><button class="secondary" data-analytics-range="month">月</button></div><div id="analyticsContent"></div></section>
+</div>
+<div class="page" id="calendarPage" hidden><section class="panel"><h2>月間カレンダー</h2><p class="muted" style="margin:-4px 0 12px">日ごとの学習時間を確認できるよ。</p></section></div>
+<div class="page" id="analyticsPage" hidden><section class="panel"><h2>学習分析</h2><p class="muted" style="margin:-4px 0 12px">曜日別の集中時間を確認できるよ。</p></section></div>
+
+
+<div class="page" id="studyRoomPage" hidden>
+ <section class="study-room-panel">
+  <div class="study-room-view little-planet-view season-autumn time-day" id="studyRoomView">
+   <div class="study-room-top">
+    <div><div class="study-room-kicker">A QUIET PLACE IN THE UNIVERSE</div><div class="study-room-title">星を眺める場所</div></div>
+    <div class="study-room-top-actions"><div class="study-room-season" id="studyRoomSeason">秋 · 昼</div><button class="room-text-toggle" id="roomTextToggle" type="button" aria-label="文字情報を隠す" aria-pressed="false" title="文字情報の表示切替">Aa</button><button class="study-room-weather" id="studyRoomWeather" type="button" aria-label="名古屋市の今日の天気を再取得">名古屋市 · 天気</button><button class="room-exit" id="roomExit" type="button" aria-label="書斎を閉じる" title="書斎を閉じる">×</button></div>
+   </div>
+   <div class="study-window little-planet-scene" aria-hidden="true">
+    <svg class="room-landscape planet-landscape" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" role="presentation">
+     <defs>
+      <linearGradient id="planetSpace" x1="0" y1="0" x2=".2" y2="1"><stop stop-color="#101b3d"/><stop offset=".48" stop-color="#27365e"/><stop offset="1" stop-color="#796b83"/></linearGradient>
+      <radialGradient id="planetNebula"><stop stop-color="#e5b9c0" stop-opacity=".35"/><stop offset=".55" stop-color="#8d9bc5" stop-opacity=".12"/><stop offset="1" stop-color="#7b8db5" stop-opacity="0"/></radialGradient>
+      <radialGradient id="planetGlow"><stop stop-color="#fff4d7" stop-opacity=".95"/><stop offset=".22" stop-color="#f5d9b5" stop-opacity=".35"/><stop offset="1" stop-color="#f5d9b5" stop-opacity="0"/></radialGradient>
+      <linearGradient id="littleWorld" x1=".15" y1="0" x2=".8" y2="1"><stop stop-color="#e6c9a4"/><stop offset=".45" stop-color="#bd9b91"/><stop offset="1" stop-color="#725f78"/></linearGradient>
+      <linearGradient id="worldNight" x1="0" y1="0" x2="1" y2=".2"><stop stop-color="#354568" stop-opacity="0"/><stop offset="1" stop-color="#1c274b" stop-opacity=".88"/></linearGradient>
+      <linearGradient id="planetRing" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5dfc0" stop-opacity=".08"/><stop offset=".48" stop-color="#f4d8b4" stop-opacity=".78"/><stop offset=".6" stop-color="#a9a3c3" stop-opacity=".35"/><stop offset="1" stop-color="#f8e4c7" stop-opacity=".08"/></linearGradient>
+      <clipPath id="worldClip"><circle cx="555" cy="620" r="315"/></clipPath>
+     </defs>
+     <rect width="1000" height="700" fill="url(#planetSpace)"/>
+     <ellipse cx="260" cy="230" rx="360" ry="260" fill="url(#planetNebula)" class="nebula-cloud nebula-one"/>
+     <ellipse cx="820" cy="330" rx="330" ry="250" fill="url(#planetNebula)" class="nebula-cloud nebula-two"/>
+     <g class="starfield" fill="#fff3d9">
+      <circle cx="70" cy="92" r="2.4"/><circle cx="142" cy="182" r="1.7"/><circle cx="230" cy="72" r="2"/><circle cx="320" cy="155" r="1.5"/><circle cx="405" cy="60" r="2.2"/><circle cx="510" cy="125" r="1.5"/><circle cx="620" cy="70" r="2.5"/><circle cx="730" cy="150" r="1.7"/><circle cx="840" cy="72" r="2.1"/><circle cx="930" cy="188" r="1.6"/>
+      <circle cx="85" cy="330" r="1.5"/><circle cx="190" cy="285" r="2.3"/><circle cx="285" cy="370" r="1.4"/><circle cx="390" cy="280" r="2"/><circle cx="710" cy="280" r="1.8"/><circle cx="830" cy="360" r="2.4"/><circle cx="945" cy="430" r="1.6"/><circle cx="130" cy="470" r="2"/>
+     </g>
+     <g class="star-crosses" stroke="#fff0d0" stroke-linecap="round" opacity=".8"><path d="M170 105v14m-7-7h14 M770 90v18m-9-9h18 M905 280v12m-6-6h12 M350 225v10m-5-5h10" stroke-width="1.5"/></g>
+     <circle class="far-planet far-planet-one" cx="170" cy="365" r="43" fill="#c5a7b2"/>
+     <path d="M132 355q38-27 75-2" fill="none" stroke="#f2d8c7" stroke-opacity=".55" stroke-width="5"/>
+     <circle class="far-planet far-planet-two" cx="820" cy="235" r="23" fill="#d7c5a9"/>
+     <ellipse cx="820" cy="235" rx="42" ry="10" fill="none" stroke="#d9c5bb" stroke-width="4" opacity=".65" transform="rotate(-18 820 235)"/>
+     <circle cx="690" cy="120" r="82" fill="url(#planetGlow)" class="distant-sun-glow"/>
+     <circle cx="690" cy="120" r="15" fill="#fff0d2" class="distant-sun"/>
+     <g class="comet-trail"><path d="M930 105q-58 16-95 66" fill="none" stroke="#f5dfcf" stroke-opacity=".65" stroke-width="2"/><circle cx="930" cy="105" r="4" fill="#fff5dc"/></g>
+     <ellipse class="world-ring-back" cx="555" cy="610" rx="380" ry="88" fill="none" stroke="url(#planetRing)" stroke-width="24" transform="rotate(-12 555 610)"/>
+     <circle cx="555" cy="620" r="315" fill="url(#littleWorld)"/>
+     <g clip-path="url(#worldClip)">
+      <path d="M220 490q90-95 190-34t180-5q95-42 280 55v280H220Z" fill="#d6b99c" opacity=".56"/>
+      <path d="M220 560q130-92 250-30t220-14q85-22 190 28v230H220Z" fill="#9e9a91"/>
+      <path d="M220 625q120-74 235-18t240-24q100-24 190 24v180H220Z" fill="#6e7e7e"/>
+      <path d="M260 690q130-54 230-6t220-28q90-20 170 12v120H260Z" fill="#485f69"/>
+      <path d="M290 515q115-42 185 2t145-5" fill="none" stroke="#f3dfc0" stroke-opacity=".52" stroke-width="7"/>
+      <path d="M310 595q95-36 170 0t165-12" fill="none" stroke="#e8c9aa" stroke-opacity=".4" stroke-width="5"/>
+      <g class="little-world-home">
+       <path d="M440 492l34-32 38 32v43h-72z" fill="#806b72"/><path d="M432 493l42-39 45 39" fill="none" stroke="#f1d9bb" stroke-width="6" stroke-linejoin="round"/><rect x="466" y="507" width="15" height="28" rx="7" fill="#f6dcae"/><rect x="490" y="503" width="11" height="12" rx="2" fill="#f7e5c5"/>
+       <path d="M510 531q30-25 58-8" fill="none" stroke="#dfc8ad" stroke-width="3" opacity=".65"/>
+      </g>
+      <g class="solitary-tree">
+       <path d="M650 490q-5-45 2-92" fill="none" stroke="#564d50" stroke-width="9" stroke-linecap="round"/>
+       <path d="M652 440l-27-27m27 12l28-34m-28 53l-20-9" fill="none" stroke="#564d50" stroke-width="5" stroke-linecap="round"/>
+       <g fill="#788b79" stroke="#b5b99c" stroke-width="2"><ellipse cx="621" cy="402" rx="20" ry="10" transform="rotate(24 621 402)"/><ellipse cx="682" cy="407" rx="23" ry="11" transform="rotate(-32 682 407)"/><ellipse cx="649" cy="382" rx="21" ry="12" transform="rotate(-8 649 382)"/></g>
+      </g>
+      <g class="tiny-flower"><path d="M745 535v-30" stroke="#526454" stroke-width="3"/><g fill="#e9c5c8"><ellipse cx="745" cy="498" rx="8" ry="13"/><ellipse cx="733" cy="507" rx="8" ry="12" transform="rotate(-55 733 507)"/><ellipse cx="757" cy="507" rx="8" ry="12" transform="rotate(55 757 507)"/></g><circle cx="745" cy="506" r="5" fill="#f6e1ad"/></g>
+      <path d="M240 540q80-30 120-5m-95 30q60-18 105-2m310 70q90-24 140-4" fill="none" stroke="#f4d8b9" stroke-opacity=".32" stroke-width="4"/>
+      <g class="world-fireflies" fill="#fff0c8"><circle cx="380" cy="560" r="3"/><circle cx="590" cy="535" r="2.5"/><circle cx="710" cy="600" r="3"/></g>
+      <rect x="240" y="310" width="630" height="520" fill="url(#worldNight)"/>
+     </g>
+     <ellipse class="world-ring-front" cx="555" cy="610" rx="380" ry="88" fill="none" stroke="url(#planetRing)" stroke-width="24" transform="rotate(-12 555 610)"/>
+     <g class="orbiting-dust" fill="#f8e9cf"><circle cx="245" cy="250" r="3"/><circle cx="275" cy="265" r="1.8"/><circle cx="755" cy="420" r="2.2"/><circle cx="790" cy="445" r="1.5"/></g>
+    </svg>
+   </div>
+   <svg class="cosmic-motion" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+     <linearGradient id="windRibbon" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#c5e3ed" stop-opacity="0"/><stop offset=".48" stop-color="#d8e7e8" stop-opacity=".42"/><stop offset="1" stop-color="#f3d8cf" stop-opacity="0"/></linearGradient>
+     <linearGradient id="shootingGlow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#fff4d8" stop-opacity="0"/><stop offset=".72" stop-color="#fff1d5" stop-opacity=".78"/><stop offset="1" stop-color="#fffdf0"/></linearGradient>
+    </defs>
+    <g class="wind-ribbons" fill="none" stroke="url(#windRibbon)" stroke-linecap="round">
+     <path d="M-90 300 C120 245 210 350 390 292 S690 250 1090 310" stroke-width="3"/>
+     <path d="M-110 330 C100 285 220 390 420 330 S760 290 1080 350" stroke-width="1.6" opacity=".7"/>
+     <path d="M-100 430 C120 390 250 465 430 420 S760 390 1080 445" stroke-width="2.2" opacity=".55"/>
+    </g>
+    <g class="wind-dust" fill="#f8e9d7">
+     <circle cx="155" cy="318" r="2"/><circle cx="260" cy="350" r="1.4"/><circle cx="720" cy="300" r="1.8"/><circle cx="870" cy="385" r="1.5"/>
+    </g>
+    <g class="shooting-star shooting-star-one">
+     <path d="M-90 0 L0 0" stroke="url(#shootingGlow)" stroke-width="2.6" stroke-linecap="round"/>
+     <circle cx="0" cy="0" r="3.2" fill="#fff9e8"/>
+    </g>
+    <g class="shooting-star shooting-star-two">
+     <path d="M-65 0 L0 0" stroke="url(#shootingGlow)" stroke-width="1.8" stroke-linecap="round"/>
+     <circle cx="0" cy="0" r="2.4" fill="#fff9e8"/>
+    </g>
+   </svg>
+   <svg class="earned-sky" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="milkyWayGlow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#c9c9ef" stop-opacity="0"/><stop offset=".48" stop-color="#f0dff0" stop-opacity=".72"/><stop offset="1" stop-color="#b9d5ed" stop-opacity="0"/></linearGradient></defs>
+    <g class="earned-milkyway" fill="none" stroke="url(#milkyWayGlow)" stroke-linecap="round">
+     <path d="M-80 190 C150 80 260 250 450 155 S760 65 1080 170" stroke-width="74" opacity=".22"/>
+     <path d="M-60 205 C160 105 270 260 470 170 S770 95 1060 190" stroke-width="27" opacity=".34"/>
+     <path d="M-40 210 C170 125 290 255 480 180 S790 110 1050 200" stroke-width="2" stroke-dasharray="2 13" opacity=".7"/>
+    </g>
+    <g class="earned-star-dust" fill="#fff4df"><circle cx="190" cy="150" r="2"/><circle cx="310" cy="195" r="1.5"/><circle cx="440" cy="125" r="2.2"/><circle cx="590" cy="180" r="1.4"/><circle cx="760" cy="125" r="2"/><circle cx="870" cy="185" r="1.6"/><circle cx="520" cy="90" r="1.3"/><circle cx="260" cy="90" r="1.2"/></g>
+    <g class="earned-meteors" fill="none" stroke-linecap="round">
+     <path d="M0 0 L-78 30" stroke="#fff4dc" stroke-width="2.2"/><path d="M0 0 L-78 30" stroke="#c9d9f3" stroke-width="7" opacity=".16"/>
+     <path d="M0 0 L-55 22" stroke="#fff4dc" stroke-width="1.7"/>
+    </g>
+   </svg>
+   <div class="sky-progress-label" id="skyProgressLabel" aria-live="polite">今夜の星空</div>
+   <div class="room-window-shelf planet-hourglass"><button class="desk-hourglass room-hourglass-shelf" id="hourglassStart" type="button" aria-label="5分間の休憩を始める">
+    <svg class="hourglass-art" id="hourglassArt" viewBox="0 0 100 120" role="img" aria-label="砂が落ちる砂時計"><path class="hourglass-frame" d="M27 7H73 M27 113H73 M31 9C31 35 48 43 50 60C52 77 69 85 69 111 M69 9C69 35 52 43 50 60C48 77 31 85 31 111"/><path class="hourglass-glass" d="M32 12C32 34 47 43 50 58C53 43 68 34 68 12Z M50 62C47 78 32 87 32 108H68C68 87 53 78 50 62Z"/><path class="hourglass-sand-top" id="hourglassSandTop" d="M35 15H65C64 31 57 39 50 48C43 39 36 31 35 15Z"/><path class="hourglass-sand-bottom" id="hourglassSandBottom" d="M35 105C37 89 43 82 50 74C57 82 63 89 65 105Z"/><path class="hourglass-stream" d="M50 48V74"/></svg>
+    <span class="desk-hourglass-time" id="hourglassTime">05:00</span><span class="desk-hourglass-label" id="hourglassState">タップで休憩 · 長押しでリセット</span>
+   </button></div>
+   <div class="study-room-bottom"><div><div class="study-room-clock" id="studyRoomClock">15:00</div><div class="study-room-date" id="studyRoomDate">11月21日 土曜日</div></div><div class="study-room-foot">A LITTLE WORLD, SOMEWHERE</div></div>
+   <p class="study-room-note" id="studyRoomMessage">遠くの星にも、誰かの大切なものがある。</p>
+  </div>
+ </section>
+</div>
+<div class="page" id="settingsPage" hidden>
+ <details class="panel"><summary>タイマー設定</summary>
+  <div class="settings">
+   <label>集中時間（分）<input id="focusDuration" type="number" min="1" max="120" value="25"></label>
+   <label>短い休憩（分）<input id="shortDuration" type="number" min="1" max="60" value="5"></label>
+   <label>長い休憩（分）<input id="longDuration" type="number" min="1" max="90" value="15"></label>
+   <label>長い休憩まで<input id="cycleDuration" type="number" min="2" max="8" value="4"></label>
+  </div>
+  <button class="secondary wide" id="apply">設定を適用</button>
+ </details>
+ <details class="panel"><summary>通知</summary><p class="muted" style="margin:12px 0 10px">タイマー終了時の通知を使うか選べるよ。iPhoneでは通知の許可やホーム画面アプリの状態に左右されるよ。</p><button class="secondary wide" id="notificationToggle" aria-pressed="false">完了通知：オフ</button></details>
+ <details class="panel"><summary>デザイン</summary>
+  <div class="muted" style="margin-bottom:12px">テーマカラー</div>
+  <div class="theme-grid" role="group" aria-label="テーマカラー">
+   <button class="theme-choice selected" data-theme="green" aria-pressed="true"><i style="background:#8ec5a3"></i>フォレスト</button>
+   <button class="theme-choice" data-theme="blue" aria-pressed="false"><i style="background:#8ab9e8"></i>オーシャン</button>
+   <button class="theme-choice" data-theme="purple" aria-pressed="false"><i style="background:#b8a0e8"></i>ラベンダー</button>
+   <button class="theme-choice" data-theme="amber" aria-pressed="false"><i style="background:#e7b96f"></i>アンバー</button>
+   <button class="theme-choice" data-theme="rose" aria-pressed="false"><i style="background:#e6a0ad"></i>ローズ</button>
+  </div>
+  <div class="muted" style="margin:16px 0 10px">アプリ内マーク</div>
+  <div class="mark-grid" role="group" aria-label="アプリ内マーク">
+   <button class="mark-choice selected" data-mark="dot" aria-pressed="true">● ドット</button>
+   <button class="mark-choice" data-mark="star" aria-pressed="false">✦ スター</button>
+   <button class="mark-choice" data-mark="leaf" aria-pressed="false">❧ リーフ</button>
+  </div>
+  <p class="muted" style="margin:14px 0 0">テーマカラーを変えると、アクセントだけでなく背景・カード・境界線・文字色もまとめて切り替わるよ。<br>マークはアプリ画面内の表示だよ。iPhoneホーム画面のアイコンはPWAの仕様上、この画面からは切り替えられないよ。</p>
+ </details>
+ <details class="panel"><summary>目標設定</summary><div class="settings"><label>1日の目標（分）<input id="dailyGoal" type="number" min="0" max="1440" value="60"></label><label>1週間の目標（分）<input id="weeklyGoal" type="number" min="0" max="10080" value="300"></label></div><button class="secondary wide" id="saveGoals">目標を保存</button></details>
+<details class="panel"><summary>データ管理</summary><p class="muted">学習記録はこの端末のブラウザ内に保存されるよ。バックアップを保存しておけば、機種変更時などに手動で引き継げるよ。</p><button class="secondary wide" id="exportData">学習データを書き出す（JSON）</button><label class="import-label">バックアップを読み込む<input id="importData" type="file" accept="application/json,.json" style="display:none"></label><button class="secondary wide" id="clear">今日の記録をリセット</button></details>
+<details class="panel" id="recoveryPanel"><summary>復旧用データの確認・復元</summary>
+ <p class="muted">移行前や読み込み前に端末内へ保護したデータを確認できるよ。復元できるものは、現在の学習記録を置き換える前に確認を表示するよ。破損した元データは削除せず、そのまま書き出せるよ。</p>
+ <div id="recoveryList" class="recovery-list" aria-live="polite"><p class="muted">復旧用データを確認中…</p></div>
+</details>
+</div>
+</section>
+<nav class="tabbar" aria-label="ページ切り替え">
+ <button class="tab active" data-page="timerPage"><span>◷</span>タイマー</button>
+ <button class="tab" data-page="overviewPage"><span>▥</span>概要</button>
+ <button class="tab" data-page="calendarPage"><span>▦</span>カレンダー</button>
+  <button class="tab" data-page="analyticsPage"><span>⌁</span>分析</button>
+ <button class="tab" data-page="studyRoomPage"><span>⌂</span>書斎</button>
+
+</nav>
+<div class="foot"><span>FOCUS · STUDY TIMER</span></div><div id="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="./src/main.js"></script>
+
+
+
+</body></html>
