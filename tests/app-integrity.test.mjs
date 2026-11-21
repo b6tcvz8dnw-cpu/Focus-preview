@@ -214,7 +214,7 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("app refreshes deadline-based timers after a back-forward cache restore", async () => {
   const script = await read("../src/main.js");
   assert.ok(script.includes("function refreshAfterReturn()"));
-  assert.ok(script.includes("document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('app-document-hidden',document.hidden);if(!document.hidden)refreshAfterReturn()})"));
+  assert.ok(script.includes("document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('app-document-hidden',document.hidden);if(document.hidden){timerController.setVisible(false);hourglass.setVisible(false)}else refreshAfterReturn()})"));
   assert.ok(script.includes("window.addEventListener('pageshow',event=>{if(event.persisted)refreshAfterReturn()})"));
   assert.ok(script.includes("if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()"));
 });
@@ -1054,6 +1054,14 @@ test("study room hourglass remains above decorative layers and accepts touch inp
   assert.ok(hourglass.includes("getState: () => ({ duration, remaining, running, deadline })"));
 });
 
+test("hourglass scheduler is suspended while hidden and resumed from its deadline", async () => {
+  const source = await read("../src/features/hourglass.js");
+  assert.ok(source.includes("function setVisible(visible)"));
+  assert.ok(source.includes("tick();"));
+  assert.ok(source.includes("scheduleTick();"));
+  assert.ok(source.includes("return { tick, reset, setVisible, getState:"));
+});
+
 test("hourglass supports keyboard reset and announces the reset instruction", async () => {
   const elements = new Map();
   const handlers = new Map();
@@ -1142,7 +1150,7 @@ test("Study Room keeps weather refresh, date updates, and sky progress connected
   const room = await read("../src/features/study-room.js");
   assert.ok(main.includes("studyRoom.update();studyRoom.loadWeather()"));
   assert.ok(main.includes("hourglass.tick();studyRoom.onVisible()"));
-  assert.ok(room.includes("window.setInterval(update,60000)"));
+  assert.ok(room.includes("window.setInterval(()=>{if(!root.hidden&&!$('studyRoomPage')?.hidden)update()},60000)"));
   assert.ok(room.includes("updateSky();"));
   assert.ok(room.includes("studyRoomWeather').addEventListener('click'"));
 });
@@ -1212,6 +1220,20 @@ test("timer controller starts, pauses, and persists a deadline-based runtime", (
   assert.equal(h.controller.getState().running, false);
   assert.equal(h.store.getJSON("focus-timer-runtime").remaining, 48);
   assert.equal(h.jobs.size, 0);
+});
+
+test("timer controller suspends its interval while hidden and catches up from its deadline on return", () => {
+  const h = createFakeTimerHarness();
+  h.controller.start();
+  assert.equal(h.jobs.size, 1);
+  h.controller.setVisible(false);
+  assert.equal(h.jobs.size, 0);
+  h.advance(15000);
+  assert.equal(h.controller.getState().remaining, 60);
+  h.controller.setVisible(true);
+  assert.equal(h.jobs.size, 1);
+  h.controller.tick();
+  assert.equal(h.controller.getState().remaining, 45);
 });
 
 test("focus completion records once and automatically starts the correct break", () => {
