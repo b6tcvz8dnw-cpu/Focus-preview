@@ -22,7 +22,8 @@
 - テスト: Node.js標準テストランナー
 - モジュール: `src/core/date-time.js`（`formatClock`, `dateKey`, `buildWeekData`, `getStudySkyLevel`）
 - タイマー計算: `src/core/timer.js`（絶対時刻からの残り時間、不正値の防御、休憩モードの選択）
-- 外観設定: `src/features/appearance-controller.js`（テーマ5種・ブランドマーク3種の適用、ボタン状態、既存保存キーの読み書き）\n- タイマー状態管理: `src/features/timer-controller.js`（開始・一時停止・リセット・モード変更・自動休憩・期限切れ復元・実行状態保存。DOM非依存、UI/統計/通知はコールバック注入）
+- 外観設定: `src/features/appearance-controller.js`（テーマ5種・ブランドマーク3種の適用、ボタン状態、既存保存キーの読み書き）
+- 復旧UI: `src/features/recovery-controller.js`（復旧候補の描画、原文書き出し、復元前保護、統計ストアへの安全な置換）\n- タイマー状態管理: `src/features/timer-controller.js`（開始・一時停止・リセット・モード変更・自動休憩・期限切れ復元・実行状態保存。DOM非依存、UI/統計/通知はコールバック注入）
 - 保存層: `src/data/storage.js`（文字列・JSONの読み書き、利用不可・不正JSONへの防御処理）
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
@@ -51,7 +52,7 @@
 | 砂時計 | `startHourglass`, `tickHourglass`, `resetHourglass` |
 | 外観・設定 | テーマとマークは `src/features/appearance-controller.js`。書斎全画面切替は `src/main.js` |
 | 環境音 | `startAmbient`, `setAmbientLayer`, `stopAmbient` |
-| バックアップ | `exportData` / `importData` のイベント処理 |
+| バックアップ | インポートは `src/main.js` が形式検証・設定反映を調整。復旧候補UI・原文書き出し・安全な復元は `src/features/recovery-controller.js` |
 
 ## 既存localStorageキー
 
@@ -255,3 +256,13 @@
 - Unknown or corrupt appearance preferences safely fall back to the existing Forest / dot defaults.
 - Automated tests cover restore, switching, persistence, fallback behavior, accessible button state, and listener cleanup.
 - No intentional visual redesign or new appearance option was introduced.
+
+
+## Recovery UI controller — 2026-11-22
+
+- Extracted recovery panel rendering, raw snapshot download, restore confirmation, and pre-restore protection into `src/features/recovery-controller.js`.
+- Kept snapshot classification and schema/future-version checks in `src/data/recovery.js`; all learning-data replacement remains owned by `src/data/stats-store.js`.
+- The main entry point now supplies DOM, confirmation, messages, and post-restore refresh callbacks only.
+- Added tests for export-only corrupt data, JSON export, successful restore, listener cleanup, and aborting when the pre-restore snapshot cannot be saved.
+- Removed a stale pre-extraction appearance call path that referenced removed global theme functions; appearance initialization remains owned by `appearance-controller.js`.
+- Preview Service Worker cache advanced to v7. Production repository remains unchanged.
