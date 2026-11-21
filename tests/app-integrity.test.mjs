@@ -203,13 +203,14 @@ test("PWA manifest remains valid and standalone-capable", async () => {
 test("preview service worker caches extracted modules in its own namespace", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v8");
+  assert.equal(cacheName, "focus-preview-pwa-v9");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
     assert.ok(sw.includes(asset), "service worker should cache " + asset);
   }
   assert.ok(sw.includes("caches.match"), "service worker should have a cache lookup");
+  assert.ok(sw.includes("new URL(event.request.url).origin!==self.location.origin"), "third-party API requests must bypass the app cache");
 });
 
 test("formatClock keeps the existing MM:SS display contract", () => {
@@ -1030,6 +1031,10 @@ test("Study Room scene and weather logic are isolated in a feature module", asyn
   assert.ok(room.includes("async function loadWeather(force=false)"));
   assert.ok(room.includes("function update()"));
   assert.ok(room.includes("weather-clear"));
+  assert.ok(room.includes("new AbortController()"));
+  assert.ok(room.includes("window.setTimeout(()=>weatherRequest?.abort(),10000)"));
+  assert.ok(room.includes("weatherRequest?.abort()"));
+  assert.ok(room.includes("removeEventListener('click',handleWeatherClick)"));
 });
 
 test("Study Room keeps weather refresh, date updates, and sky progress connected", async () => {
