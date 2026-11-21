@@ -762,6 +762,7 @@ test("main delegates backup import orchestration outside the entry point", async
   const main = await read("../src/main.js");
   const controller = await read("../src/features/backup-import-controller.js");
   assert.ok(main.includes("createBackupImportController("));
+  assert.doesNotMatch(main, /inspectRecoverySnapshots|audioSource|audioGain|currentSound/);
   assert.ok(!main.includes("$('importData').onchange"));
   assert.ok(controller.includes("focus-preimport-backup"));
   assert.ok(controller.includes("captureSettings"));
