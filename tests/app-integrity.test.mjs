@@ -781,3 +781,13 @@ test("Study Room keeps weather refresh, date updates, and sky progress connected
   assert.ok(room.includes("updateSky();"));
   assert.ok(room.includes("studyRoomWeather').addEventListener('click'"));
 });
+
+
+test("textless Study Room mode keeps only the hourglass countdown visible", async () => {
+  const html = await read("../index.html");
+  const rule = html.split("\n").find(line => line.includes(".study-room-view.room-quiet-text .study-room-kicker"));
+  assert.ok(rule);
+  assert.doesNotMatch(rule, /desk-hourglass-time/);
+  assert.match(rule, /desk-hourglass-label\{display:none!important\}/);
+  assert.match(html, /\.desk-hourglass-time\{font-size:16px/);
+});
