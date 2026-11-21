@@ -86,6 +86,18 @@ test("countdown intervals match the one-second display precision", async () => {
   assert.ok(!script.includes("setInterval(tickHourglass,250)"));
 });
 
+test("hourglass has visible falling-grain animation and viewBox-based sand scaling", async () => {
+  const html = await read("../index.html");
+  assert.ok(html.includes("transform-box:view-box"));
+  assert.ok(html.includes("@keyframes sand-flow"));
+  assert.ok(html.includes("@keyframes sand-grain-fall"));
+  assert.ok(html.includes('class="hourglass-grain grain-a"'));
+  assert.ok(html.includes('class="hourglass-grain grain-b"'));
+  assert.ok(html.includes('class="hourglass-grain grain-c"'));
+  assert.ok(html.includes(".hourglass-art.is-running .hourglass-grain"));
+  assert.ok(html.includes(".hourglass-art.is-running .hourglass-stream{animation:none"));
+});
+
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
   const html = await read("../index.html");
   const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
