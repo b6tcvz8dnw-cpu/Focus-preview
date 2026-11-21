@@ -17,6 +17,7 @@ import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURR
 import { inspectRecoverySnapshots } from "../src/data/recovery.js";
 import { writeStatsWithBackup } from "../src/data/transactions.js";
 import { createTimerController } from "../src/features/timer-controller.js";
+import { createAmbientSoundController } from "../src/features/ambient-sound.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -1147,4 +1148,109 @@ test("main delegates study presentation to the dedicated views module", async ()
   assert.ok(script.includes("studyViews.renderAnalytics"));
   assert.ok(!script.includes("function renderCalendar(){const y="));
   assert.ok(!script.includes("function renderAnalytics(){const now="));
+});
+
+
+function createFakeAudioHarness(options = {}) {
+  const buttons = new Map();
+  const presetButtons = ['rainy','breeze','quiet','off'].map(soundPreset => ({
+    dataset: { soundPreset },
+    selected: false,
+    classList: { toggle(name, value) { if (name === 'selected') this.selected = value; }, remove() { this.selected = false; } }
+  }));
+  const root = {
+    querySelector(selector) {
+      const match = selector.match(/data-sound="([^"]+)"/);
+      if (!match) return null;
+      const kind = match[1];
+      if (!buttons.has(kind)) buttons.set(kind, {
+        dataset: { sound: kind }, pressed: 'false', selected: false,
+        setAttribute(name, value) { if (name === 'aria-pressed') this.pressed = value; },
+        classList: { toggle(name, value) { if (name === 'selected') buttons.get(kind).selected = value; }, remove() { buttons.get(kind).selected = false; } }
+      });
+      return buttons.get(kind);
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-sound-preset]') return presetButtons;
+      if (selector === '[data-sound]') return [...buttons.values()];
+      return [];
+    }
+  };
+  const sources = [];
+  const gains = [];
+  class FakeAudioContext {
+    constructor() { this.sampleRate = 4; this.currentTime = 10; this.destination = {}; }
+    resume() { return Promise.resolve(); }
+    createBuffer(channels, size, rate) {
+      const data = new Float32Array(size);
+      return { getChannelData: () => data };
+    }
+    createBufferSource() {
+      const source = { loop: false, stoppedAt: null, connect(next) { this.next = next; }, start() { this.started = true; }, stop(at) { this.stoppedAt = at; } };
+      sources.push(source);
+      return source;
+    }
+    createBiquadFilter() { return { frequency: {}, connect(next) { this.next = next; } }; }
+    createGain() {
+      const gain = { gain: { value: 0, setTargetAtTime(value, time, constant) { this.target = [value,time,constant]; } }, connect(next) { this.next = next; } };
+      gains.push(gain);
+      return gain;
+    }
+  }
+  let unsupported = 0;
+  const controller = createAmbientSoundController({
+    root,
+    getAudioContextConstructor: () => options.unsupported ? null : FakeAudioContext,
+    getVolume: () => options.volume ?? 0.6,
+    onUnsupported: () => unsupported++,
+    random: () => 0.75
+  });
+  return { controller, buttons, presetButtons, sources, gains, unsupported: () => unsupported };
+}
+
+test("ambient sound controller toggles layers and updates accessible button state", () => {
+  const h = createFakeAudioHarness();
+  h.controller.toggle('rain');
+  assert.deepEqual(h.controller.getActiveLayers(), ['rain']);
+  assert.equal(h.buttons.get('rain').pressed, 'true');
+  assert.equal(h.sources[0].loop, true);
+  h.controller.toggle('rain');
+  assert.deepEqual(h.controller.getActiveLayers(), []);
+  assert.equal(h.buttons.get('rain').pressed, 'false');
+  assert.equal(h.sources[0].stoppedAt, 10.5);
+});
+
+test("ambient sound presets replace layers and volume changes reach every active layer", () => {
+  const h = createFakeAudioHarness();
+  h.controller.setPreset('rainy');
+  assert.deepEqual(h.controller.getActiveLayers(), ['rain','noise']);
+  assert.equal(h.presetButtons.find(button => button.dataset.soundPreset === 'rainy').selected, true);
+  h.controller.setVolume(0.4);
+  assert.deepEqual(h.gains.map(gain => gain.gain.target), [[0.2,10,0.08],[0.2,10,0.08]]);
+  h.controller.setPreset('off');
+  assert.deepEqual(h.controller.getActiveLayers(), []);
+  assert.ok(h.sources.every(source => source.stoppedAt === 10.5));
+  assert.equal(h.presetButtons.every(button => !button.selected), true);
+});
+
+test("ambient sound controller reports unsupported audio and stops all layers on destroy", () => {
+  const unsupported = createFakeAudioHarness({ unsupported: true });
+  unsupported.controller.toggle('wind');
+  assert.equal(unsupported.unsupported(), 1);
+  assert.deepEqual(unsupported.controller.getActiveLayers(), []);
+
+  const h = createFakeAudioHarness();
+  h.controller.setLayer('wind', true);
+  h.controller.setLayer('noise', true);
+  h.controller.destroy();
+  assert.deepEqual(h.controller.getActiveLayers(), []);
+  assert.ok(h.sources.every(source => source.stoppedAt === 10.5));
+});
+
+test("main delegates ambient sound controls to the dedicated controller", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("createAmbientSoundController"));
+  assert.ok(script.includes("ambientSound.setPreset"));
+  assert.ok(script.includes("ambientSound.setVolume"));
+  assert.doesNotMatch(script, /const ambientLayers=\{\}/);
 });
