@@ -7,7 +7,9 @@ import { inspectRecoverySnapshots } from './data/recovery.js';
 import { mountHourglass } from './features/hourglass.js';
 import { createTimerController } from './features/timer-controller.js';
 import { mountStudyRoom } from './features/study-room.js';
+import { createStudyViews } from './views/study-views.js';
 const $=id=>document.getElementById(id);
+const studyViews=createStudyViews();
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],dailyGoal=60,weeklyGoal=300,statsStore=null,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false,timerController=null;
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
 function cycle(){return Math.max(2,Math.min(8,+$('cycleDuration').value||4))}
@@ -23,32 +25,14 @@ function updateStudySky(){
  const labels=['今夜の星空','星屑が少し増えた','天の川が姿を見せた','流れ星が通り始めた','流星群の夜'];
  const label=$('skyProgressLabel');if(label)label.textContent=labels[level];
 }
-function updateChart(){updateStudySky();const data=getWeekData(),sum=data.reduce((a,d)=>a+d.minutes,0),max=Math.max(30,...data.map(d=>d.minutes));$('todayMinutes').textContent=Number(history[dateKey(new Date())]||0);$('weekTotal').textContent=sum>=60?Math.floor(sum/60)+'時間'+(sum%60?sum%60+'分':''):sum+'分';$('weekRange').textContent=data[0].key.slice(5).replace('-','/')+' 〜 '+data[6].key.slice(5).replace('-','/');$('weekChart').innerHTML=data.map(d=>{const h=d.minutes?Math.max(5,d.minutes/max*100):0;return '<div class="day-col" aria-label="'+d.key+' '+d.minutes+'分"><div class="day-value">'+(d.minutes?d.minutes+'分':'–')+'</div><div class="bar-track"><div class="day-bar" style="height:'+h+'%"></div></div><div class="day-label">'+d.label+'</div></div>'}).join('')}
-const achievements=[
- {minutes:30,title:'はじめの一歩',description:'集中時間を合計30分達成',icon:'✦'},
- {minutes:180,title:'積み重ね',description:'集中時間を合計3時間達成',icon:'◆'},
- {minutes:600,title:'習慣の芽',description:'集中時間を合計10時間達成',icon:'❋'},
- {minutes:1500,title:'探究者',description:'集中時間を合計25時間達成',icon:'✧'},
- {minutes:3000,title:'継続の人',description:'集中時間を合計50時間達成',icon:'♜'},
- {minutes:6000,title:'その先へ',description:'集中時間を合計100時間達成',icon:'★'},
- {minutes:12000,title:'深い探究',description:'集中時間を合計200時間達成',icon:'✺'},
- {minutes:30000,title:'積み重ねの軌跡',description:'集中時間を合計500時間達成',icon:'♛'}
-];
-function updateAchievements(){
- $('achievementList').innerHTML=achievements.map(a=>{
-  const earned=minutes>=a.minutes,progress=Math.min(100,minutes/a.minutes*100);
-  return '<div class="achievement '+(earned?'':'locked')+'"><div class="achievement-icon">'+a.icon+'</div><div><strong>'+a.title+'</strong><small>'+a.description+'</small><div class="achievement-progress"><i style="width:'+progress+'%"></i></div></div><div class="achievement-state">'+(earned?'達成！':Math.floor(progress)+'%')+'</div></div>';
- }).join('');
- const next=achievements.find(a=>minutes<a.minutes);
- $('achievementNext').textContent=next?'次の達成まで：あと'+(next.minutes-minutes)+'分':'すべてのアチーブメントを達成！';
-}
+function updateChart(){updateStudySky();studyViews.renderWeekly({history})}
 function update(){
  $('clock').textContent=fmt(remaining);$('modeLabel').textContent=labels[mode];$('hint').textContent=hints[mode];
  $('status').textContent=running?'● FOCUSING':finished?'● COMPLETED':'● READY';
  const ratio=total?remaining/total:0;$('timerPanel').classList.toggle('timer-near-end',ratio<=.15);$('timerPanel').classList.toggle('timer-midpoint',ratio<=.5&&ratio>.15);
  $('start').textContent=running?'Ⅱ 一時停止':'▶ スタート';
  $('progress').style.strokeDasharray=circ;$('progress').style.strokeDashoffset=circ*(1-remaining/total);
- $('sessions').textContent=completed;$('minutes').textContent=minutes;updateAchievements();$('round').textContent=(completed%cycle()+1)+'/'+cycle();
+ $('sessions').textContent=completed;$('minutes').textContent=minutes;studyViews.renderAchievements(minutes);$('round').textContent=(completed%cycle()+1)+'/'+cycle();
  $('setLabel').textContent=(completed%cycle())+' / '+cycle()+' セッション';
  [...$('dots').children].forEach((d,i)=>d.classList.toggle('done',i<completed%cycle()));
  document.title=fmt(remaining)+' | FOCUS';
@@ -111,15 +95,15 @@ timerController.restore();
 
 $('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;
 $('saveGoals').onclick=()=>{const d=Number($('dailyGoal').value),w=Number($('weeklyGoal').value);if(!Number.isInteger(d)||!Number.isInteger(w)||d<0||w<0||d>1440||w>10080){$('toast').textContent='目標は範囲内の整数で入力してね。';return}statsStore.setGoals(d,w);renderGoals();$('toast').textContent='目標を保存したよ。'};
-function renderGoals(){const today=Number(history[dateKey(new Date())]||0),week=getWeekData().reduce((a,d)=>a+d.minutes,0);const item=(label,value,goal)=>{const p=goal?Math.min(100,value/goal*100):0;return '<div class="goal-line"><div class="goal-head"><span>'+label+'</span><b>'+value+' / '+(goal||'未設定')+'分</b></div><div class="goal-track"><div class="goal-fill" style="width:'+p+'%"></div></div></div>'};$('goalProgress').innerHTML=item('今日',today,dailyGoal)+item('今週',week,weeklyGoal)}
-function renderCalendar(){const y=calendarCursor.getFullYear(),m=calendarCursor.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),vals=[];for(let i=0;i<7;i++)vals.push('<div class="calendar-cell head">'+['日','月','火','水','木','金','土'][i]+'</div>');const max=Math.max(30,...Array.from({length:days},(_,i)=>Number(history[dateKey(new Date(y,m,i+1))]||0)));for(let i=0;i<first;i++)vals.push('<div class="calendar-cell"></div>');for(let day=1;day<=days;day++){const key=dateKey(new Date(y,m,day)),v=Number(history[key]||0),heat=v?Math.max(.15,v/max):0,isToday=key===dateKey(new Date());vals.push('<div class="calendar-cell '+(isToday?'today':'')+'" title="'+v+'分"><span>'+day+'</span><i class="heat" style="--heat:'+heat+'"></i></div>')}$('calendarTitle').textContent=y+'年 '+(m+1)+'月';$('calendarGrid').innerHTML=vals.join('')}
+function renderGoals(){studyViews.renderGoals({history,dailyGoal,weeklyGoal})}
+function renderCalendar(){studyViews.renderCalendar({history,cursor:calendarCursor})}
 $('monthPrev').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);renderCalendar()};
 $('monthNext').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);renderCalendar()};
-function renderHistory(){const q=($('historySearch')?.value||'').trim().toLowerCase(),only=$('reflectionOnly')?.checked;const list=[...records].sort((a,b)=>b.timestamp-a.timestamp).filter(r=>(!only||String(r.note||'').trim())&&(!q||String(r.note||'').toLowerCase().includes(q))).slice(0,60);$('historyList').innerHTML=list.length?list.map(r=>'<div class="history-item"><div class="history-top"><span>'+new Date(r.timestamp).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</span><b>'+r.minutes+'分</b></div>'+(r.note?'<small>振り返り：'+escapeHTML(r.note)+'</small>':'')+'<div class="history-actions"><button data-record-edit="'+r.id+'">分数を修正</button><button data-record-delete="'+r.id+'">削除</button></div></div>').join(''):'<p class="muted">まだ履歴がありません。集中セッションを完了すると、ここに記録されるよ。</p>'}
-function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderHistory(){studyViews.renderHistory({records,query:$('historySearch')?.value||'',reflectionOnly:$('reflectionOnly')?.checked||false})}
 $('historyList').onclick=e=>{const del=e.target.closest('[data-record-delete]'),edit=e.target.closest('[data-record-edit]');if(del){const id=del.dataset.recordDelete,r=records.find(x=>x.id===id);if(!r||!confirm('この学習記録を削除する？'))return;statsStore.deleteRecord(id);renderAllRecords()}else if(edit){const r=records.find(x=>x.id===edit.dataset.recordEdit);if(!r)return;const n=Number(prompt('このセッションの集中時間（分）',String(r.minutes)));if(!Number.isInteger(n)||n<1||n>120)return;statsStore.updateRecord(r.id,{minutes:n});renderAllRecords()}};
 let analyticsRange='day';
-function renderAnalytics(){const now=new Date(),buckets=[];const sumRange=(start,end)=>Object.entries(history).reduce((n,[k,v])=>{const d=new Date(k+'T12:00:00');return d>=start&&d<end?n+Math.max(0,Number(v)||0):n},0);if(analyticsRange==='day'){for(let i=13;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i),end=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);buckets.push({label:(d.getMonth()+1)+'/'+d.getDate(),value:sumRange(d,end)})}}else if(analyticsRange==='week'){const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate());monday.setDate(monday.getDate()-(monday.getDay()+6)%7);for(let i=11;i>=0;i--){const start=new Date(monday);start.setDate(start.getDate()-7*i);const end=new Date(start);end.setDate(end.getDate()+7);buckets.push({label:(start.getMonth()+1)+'/'+start.getDate(),value:sumRange(start,end)})}}else{for(let i=11;i>=0;i--){const start=new Date(now.getFullYear(),now.getMonth()-i,1),end=new Date(now.getFullYear(),now.getMonth()-i+1,1);buckets.push({label:(start.getFullYear()===now.getFullYear()?start.getMonth()+1:start.getFullYear()+'/'+(start.getMonth()+1)),value:sumRange(start,end)})}}const max=Math.max(30,...buckets.map(x=>x.value)),totalValue=buckets.reduce((a,x)=>a+x.value,0),unit=analyticsRange==='day'?'分':analyticsRange==='week'?'分':'分';$('analyticsContent').innerHTML='<div class="analytics-total"><strong>'+totalValue+'</strong><span>分 · 表示期間の合計</span></div><div class="analytics-bars">'+buckets.map(x=>'<div class="analytics-bar-col" title="'+x.label+'：'+x.value+'分"><span>'+ (x.value?x.value:'–') +'</span><i><b style="height:'+Math.max(0,x.value/max*100)+'%"></b></i><small>'+x.label+'</small></div>').join('')+'</div><p class="muted">'+(analyticsRange==='day'?'直近14日間':analyticsRange==='week'?'直近12週間':'直近12か月')+' · 記録がない期間も含めて表示</p>';document.querySelectorAll('[data-analytics-range]').forEach(b=>b.classList.toggle('selected',b.dataset.analyticsRange===analyticsRange))}
+function renderAnalytics(){studyViews.renderAnalytics({history,range:analyticsRange})}
+document.querySelectorAll('[data-analytics-range]').forEach(b=>b.classList.toggle('selected',b.dataset.analyticsRange===analyticsRange))}
 document.querySelectorAll('[data-analytics-range]').forEach(b=>b.addEventListener('click',()=>{analyticsRange=b.dataset.analyticsRange;renderAnalytics()}));
 $('historySearch').addEventListener('input',renderHistory);$('reflectionOnly').addEventListener('change',renderHistory);
 function renderAllRecords(){update();updateChart();renderGoals();renderCalendar();renderHistory();renderAnalytics()}
