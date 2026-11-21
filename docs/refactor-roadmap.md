@@ -31,7 +31,7 @@
 - [x] 残り時間計算と休憩モード選択を `src/core/timer.js` に抽出
 - [ ] タイマー状態管理をUIから分離
 - [x] 学習記録の累計・日別集計を `src/data/records.js` に分離
-- [ ] 書斎・砂時計を分離（砂時計コントローラーを `src/features/hourglass.js` に抽出済み。書斎表示・天候処理は継続）
+- [x] 書斎・砂時計の主要ロジックを分離（`src/features/hourglass.js` と `src/features/study-room.js`。書斎のHTML/CSSと静的表示は引き続き段階整理）
 - [ ] CSSを責務別に分割
 
 ### Phase 2 — データ保護
