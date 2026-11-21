@@ -1,6 +1,6 @@
 import { formatClock as fmt, dateKey, buildWeekData, getStudySkyLevel } from './core/date-time.js';
 import { storage } from './data/storage.js';
-import { getRemainingSeconds, getNextBreakMode } from './core/timer.js';
+import { getRemainingSeconds } from './core/timer.js';
 import { calculateStats } from './data/records.js';
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from './data/schema.js';
 import { inspectRecoverySnapshots } from './data/recovery.js';
