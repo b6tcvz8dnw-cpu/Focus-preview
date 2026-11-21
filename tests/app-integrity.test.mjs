@@ -497,7 +497,7 @@ test("storage adapter round-trips runtime state and protects failed writes", () 
 
 test("startup restores timer only after statistics and completion callbacks are wired", async () => {
   const script = await read("../src/main.js");
-  const statsLoad = script.indexOf("const rawText=storage.getText('focus-stats'");
+  const statsLoad = script.indexOf("const statsLoad=statsStore.load()");
   const restore = script.indexOf("timerController.restore()");
   const controller = script.indexOf("timerController=createTimerController(");
   assert.ok(controller >= 0 && statsLoad > controller && restore > statsLoad);
