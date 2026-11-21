@@ -184,5 +184,5 @@ window.addEventListener('pagehide',event=>{
  appearanceController.destroy();
  recoveryController.destroy();
  importController.destroy();
-},{once:true});
+});
 
