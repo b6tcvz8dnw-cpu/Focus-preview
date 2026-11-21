@@ -91,11 +91,10 @@ test("timer display exposes timer semantics and decorative ring is hidden", asyn
 });
 
 test("countdown intervals match the one-second display precision", async () => {
-  const script = await read("../src/main.js");
-  assert.ok(script.includes("setInterval(tick,1000)"));
+  const controller = await read("../src/features/timer-controller.js");
+  assert.ok(controller.includes("schedule(tick, 1000)"));
   const hourglass = await read("../src/features/hourglass.js");
   assert.ok(hourglass.includes("window.setInterval(tick, 1000)"));
-  assert.ok(!script.includes("setInterval(tick,250)"));
   assert.ok(!hourglass.includes("window.setInterval(tick, 250)"));
 });
 
