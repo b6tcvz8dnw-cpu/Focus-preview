@@ -556,6 +556,7 @@ test("navigation and analytics controls expose their selected state to assistive
   assert.match(html, /class="tab active"[^>]*aria-current="page"/);
   assert.match(script, /t\.setAttribute\('aria-current','page'\)/);
   assert.match(script, /t\.removeAttribute\('aria-current'\)/);
+  assert.match(script, /dataset\.page==='settingsPage'.*removeAttribute\('aria-current'\)/);
   assert.match(html, /data-analytics-range="day" aria-pressed="true"/);
   assert.match(script, /t\.setAttribute\('aria-pressed',String\(active\)\)/);
   assert.match(html, /data-mode="focus" aria-pressed="true"/);
