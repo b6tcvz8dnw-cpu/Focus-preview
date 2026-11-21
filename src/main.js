@@ -5,6 +5,7 @@ import { calculateStats } from './data/records.js';
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from './data/schema.js';
 import { inspectRecoverySnapshots } from './data/recovery.js';
 import { writeStatsWithBackup } from './data/transactions.js';
+import { mountHourglass } from './features/hourglass.js';
 const $=id=>document.getElementById(id);
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,interval=null,completed=0,minutes=0,finished=false,history={},records=[],legacyCompleted=0,legacyMinutes=0,legacyHistory={},statsWriteBlocked=false,dailyGoal=60,weeklyGoal=300,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false;
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
@@ -87,50 +88,9 @@ const studyRoomTimes=[
  {id:'morning',name:'朝',from:7,to:11,sunX:'28%',sunY:'16%',message:'新しい光が窓辺に届く。今日はまだ、始まったばかり。'},
  {id:'day',name:'昼',from:11,to:16,sunX:'68%',sunY:'10%',message:'明るい空の下、ただひと息つく時間。'},
  {id:'evening',name:'夕方',from:16,to:19,sunX:'76%',sunY:'54%',message:'空の色が変わっていくのを、ゆっくり眺めよう。'},
- {id:'night',name:'夜',from:19,to:24,sunX:'70%',sunY:'18%',message:'遠くの明かりを眺めながら、静かな夜を過ごそう。'}
-];
-
-let hourglassDuration=300,hourglassRemaining=300,hourglassDeadline=0,hourglassInterval=null,hourglassRunning=false;
-const hourglassButton=$('hourglassStart');
-let hourglassPressTimer=null,hourglassLongPressed=false;
-function renderHourglass(){
- const s=Math.max(0,hourglassRemaining);
- $('hourglassTime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
- $('hourglassArt').classList.toggle('is-running',hourglassRunning);
- $('hourglassStart').setAttribute('aria-label',hourglassRunning?'5分休憩を一時停止する':s===0?'もう一度5分休憩する':'5分間の休憩を始める');
- $('hourglassState').textContent=s===0?'終了 · 長押しで戻す':hourglassRunning?'休憩中 · タップで停止':'タップで休憩 · 長押しで戻す';
- const fraction=hourglassDuration?hourglassRemaining/hourglassDuration:0;
- $('hourglassSandTop').style.transform='scaleY('+Math.max(0,fraction)+')';
- $('hourglassSandBottom').style.transform='scaleY('+Math.max(0,1-fraction)+')';
- $('hourglassTime').setAttribute('aria-label','残り '+Math.floor(s/60)+' 分 '+(s%60)+' 秒');
-}
-function stopHourglass(){if(hourglassInterval){clearInterval(hourglassInterval);hourglassInterval=null}hourglassRunning=false}
-function startHourglass(){
- if(hourglassRemaining<=0)hourglassRemaining=300;
- hourglassDeadline=Date.now()+hourglassRemaining*1000;hourglassRunning=true;
- if(hourglassInterval)clearInterval(hourglassInterval);
- hourglassInterval=window.setInterval(tickHourglass,1000);renderHourglass();
-}
-function tickHourglass(){
- if(!hourglassRunning)return;
- hourglassRemaining=getRemainingSeconds(hourglassDeadline);
- if(hourglassRemaining<=0){hourglassRemaining=0;stopHourglass()}
- renderHourglass();
-}
-function resetHourglass(){stopHourglass();hourglassDuration=300;hourglassRemaining=300;hourglassDeadline=0;renderHourglass()}
-hourglassButton.addEventListener('click',()=>{if(hourglassLongPressed){hourglassLongPressed=false;return}if(hourglassRunning){tickHourglass();if(hourglassRemaining>0){stopHourglass();renderHourglass()}}else startHourglass()});
-hourglassButton.addEventListener('pointerdown',e=>{
- if(e.pointerType==='mouse'&&e.button!==0)return;
- hourglassLongPressed=false;
- clearTimeout(hourglassPressTimer);
- hourglassPressTimer=window.setTimeout(()=>{
-  hourglassLongPressed=true;resetHourglass();
-  $('hourglassState').textContent='5分に戻しました';
- },700);
-});
-['pointerup','pointerleave','pointercancel'].forEach(type=>hourglassButton.addEventListener(type,()=>clearTimeout(hourglassPressTimer)));
-hourglassButton.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){tickHourglass();updateStudyRoom();if(document.body.classList.contains('study-room-fullscreen'))loadStudyRoomWeather()}});
+ {id:'night',name:'夜',from:19,to:24,sunconst hourglass = mountHourglass({ getRemainingSeconds });
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){hourglass.tick();if(document.body.classList.contains('study-room-fullscreen'))loadStudyRoomWeather()}});
+ullscreen'))loadStudyRoomWeather()}});
 renderHourglass();
 function setStudyRoomMode(enabled){
  document.body.classList.toggle('study-room-fullscreen',enabled);
