@@ -15,3 +15,9 @@ button,summary{min-height:44px}
 
 /* Stop decorative motion while the app is backgrounded. */
 body.app-document-hidden *{animation-play-state:paused!important}
+
+/* The Study Room is atmospheric, but its scene need not animate off-screen. */
+#studyRoomPage[hidden] .study-room-view,
+#studyRoomPage[hidden] .study-room-view *,
+#studyRoomPage[hidden] .study-room-view::before,
+#studyRoomPage[hidden] .study-room-view::after{animation-play-state:paused!important}
