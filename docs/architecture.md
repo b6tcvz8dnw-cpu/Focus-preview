@@ -117,3 +117,11 @@
 - If the new stats write fails, the old stats remain intact and the pre-import snapshot remains available for recovery.
 - `src/data/transactions.js` contains the storage transaction helper; three tests cover success, backup-write failure, and stats-write failure.
 - These changes are limited to `Focus-preview`; production repository `Focus` was not modified.
+
+
+## UI / PWA path audit — 2026-11-21
+
+- Found root-relative manifest and icon references in the document head, which are incorrect for a GitHub Pages project site mounted below `/Focus-preview/`.
+- Changed the manifest, favicon, and Apple touch icon references to `./` relative paths.
+- Added a regression test to prevent these root-relative asset references from returning.
+- Recheck Home Screen installation after this deployment because the prior manual installation check predates this path correction.
