@@ -39,17 +39,17 @@ export function createAppearanceController({ root, storage }) {
     }
   }
 
-  function setTheme(name) {
+  function setTheme(name, { persist = true } = {}) {
     theme = Object.hasOwn(THEMES, name) ? name : "green";
     renderTheme(theme);
-    storage.setJSON("focus-appearance", { theme, mark });
+    if (persist) storage.setJSON("focus-appearance", { theme, mark });
     return getState();
   }
 
-  function setMark(name) {
+  function setMark(name, { persist = true } = {}) {
     mark = Object.hasOwn(MARKS, name) ? name : "dot";
     renderMark(mark);
-    storage.setText("focus-mark", mark);
+    if (persist) storage.setText("focus-mark", mark);
     return getState();
   }
 
