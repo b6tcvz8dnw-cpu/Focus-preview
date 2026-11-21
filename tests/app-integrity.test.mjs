@@ -900,7 +900,8 @@ test("break completion finishes without automatically starting another session",
 });
 
 test("timer controller restores active and expired runtimes safely", () => {
-  const h = createFakeTimerHarness();
+  let activeCompleted = 1;
+  const h = createFakeTimerHarness({ getCompletedSessions: () => activeCompleted, onFocusComplete: () => { activeCompleted++; } });
   h.store.setJSON("focus-timer-runtime", {
     mode: "focus", remaining: 30, deadline: h.now() + 30000,
     running: true, finished: false, updatedAt: h.now()
