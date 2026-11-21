@@ -285,3 +285,5 @@
 - If persistence fails, add/edit/delete/clear-day/goal mutations return `false`; the previous in-memory snapshot and rendered state remain authoritative.
 - The UI now reports failed writes for session completion, goals, history edits/deletions, reflections, and day clearing. Clearing records no longer resets the timer before the record write succeeds.
 - Added regression coverage for failed writes across all stats mutation operations.
+
+- The entry-point audit also removed an obsolete recovery-data import and unused audio state fields left behind by earlier feature extractions.
