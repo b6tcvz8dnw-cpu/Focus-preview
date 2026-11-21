@@ -109,7 +109,7 @@ function renderAllRecords(){update();updateChart();renderGoals();renderCalendar(
 function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}if(!statsStore.updateRecord(r.id,{note:$('reflection').value.trim()})){$('toast').textContent='振り返りを保存できなかったよ。';return}renderHistory();$('toast').textContent='振り返りを保存したよ。'}
 $('saveReflection').onclick=saveReflection;
 
-$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();if(!statsStore.clearDayRecords(dateKey(new Date()))) {$('toast').textContent='今日の記録を消去できなかったよ。';return}timerController.reset();$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
+$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;if(!statsStore.clearDayRecords(dateKey(new Date()))) {$('toast').textContent='今日の記録を消去できなかったよ。';return}timerController.reset();$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
 
 
 const ambientSound = createAmbientSoundController({
