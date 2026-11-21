@@ -3,6 +3,8 @@ export function createAmbientSoundController({
   root = document,
   getAudioContextConstructor = () => globalThis.AudioContext || globalThis.webkitAudioContext,
   getVolume = () => 0.5,
+  getExistingAudioContext = () => null,
+  onContextCreated = () => {},
   onUnsupported = () => {},
   random = Math.random
 } = {}) {
@@ -64,7 +66,10 @@ export function createAmbientSoundController({
       return false;
     }
     try {
-      context = context || new AudioContextCtor();
+      if (!context) {
+        context = getExistingAudioContext() || new AudioContextCtor();
+        onContextCreated(context);
+      }
       const resumed = context.resume?.();
       if (resumed?.catch) resumed.catch(() => {});
       const size = context.sampleRate * 4;
