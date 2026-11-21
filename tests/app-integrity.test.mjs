@@ -526,11 +526,11 @@ test("screen navigation and direct DOM references resolve to existing page eleme
 
 test("focus completion callback is the only session-record creation path", async () => {
   const script = await read("../src/main.js");
-  const created = [...script.matchAll(/records\.push\(record\)/g)];
+  const created = [...script.matchAll(/statsStore\.addSession\(record\)/g)];
   assert.equal(created.length, 1);
   assert.ok(script.includes("onFocusComplete(){"));
   assert.ok(script.includes("minutes:durations.focus"));
-  assert.ok(script.includes("save();if(appReady)"));
+  assert.ok(script.includes("if(appReady){"));
 });
 
 test("backup validation round-trips normalized session history", () => {
