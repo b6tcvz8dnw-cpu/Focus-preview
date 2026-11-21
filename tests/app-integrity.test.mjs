@@ -22,6 +22,7 @@ import { createNotificationController } from "../src/features/notification-contr
 import { createAppearanceController } from "../src/features/appearance-controller.js";
 import { createRecoveryController } from "../src/features/recovery-controller.js";
 import { createBackupImportController } from "../src/features/backup-import-controller.js";
+import { mountHourglass } from "../src/features/hourglass.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -549,6 +550,17 @@ test("screen navigation and direct DOM references resolve to existing page eleme
   }
 });
 
+test("navigation and analytics controls expose their selected state to assistive technology", async () => {
+  const html = await read("../index.html");
+  const script = await read("../src/main.js");
+  assert.match(html, /class="tab active"[^>]*aria-current="page"/);
+  assert.match(script, /t\.setAttribute\('aria-current','page'\)/);
+  assert.match(script, /t\.removeAttribute\('aria-current'\)/);
+  assert.match(html, /data-analytics-range="day" aria-pressed="true"/);
+  assert.match(script, /t\.setAttribute\('aria-pressed',String\(active\)\)/);
+  assert.match(html, /data-mode="focus" aria-pressed="true"/);
+});
+
 test("focus completion callback is the only session-record creation path", async () => {
   const script = await read("../src/main.js");
   const created = [...script.matchAll(/statsStore\.addSession\(record\)/g)];
@@ -1012,6 +1024,40 @@ test("study room hourglass remains above decorative layers and accepts touch inp
   assert.ok(hourglass.includes("button.addEventListener('pointerdown'"));
   assert.ok(hourglass.includes("window.setInterval(tick, 1000)"));
   assert.ok(hourglass.includes("getState: () => ({ duration, remaining, running, deadline })"));
+});
+
+test("hourglass supports keyboard reset and announces the reset instruction", async () => {
+  const elements = new Map();
+  const handlers = new Map();
+  const button = {
+    addEventListener(type, handler) { handlers.set(type, handler); },
+    setAttribute(name, value) { this[name] = value; }
+  };
+  const art = { classList: { toggle() {} } };
+  for (const id of ["hourglassStart", "hourglassTime", "hourglassArt", "hourglassState", "hourglassSandTop", "hourglassSandBottom"]) {
+    elements.set(id, id === "hourglassStart" ? button : id === "hourglassArt" ? art : { style: {}, setAttribute() {} });
+  }
+  const priorWindow = globalThis.window;
+  globalThis.window = { setInterval: () => null };
+  try {
+    const controller = mountHourglass({ getRemainingSeconds: () => 300, root: { getElementById: id => elements.get(id) } });
+    handlers.get("click")();
+    assert.equal(controller.getState().running, true);
+    let prevented = false;
+    handlers.get("keydown")({ key: "r", repeat: false, ctrlKey: false, metaKey: false, altKey: false, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.deepEqual(controller.getState(), { duration: 300, remaining: 300, running: false, deadline: 0 });
+    assert.equal(elements.get("hourglassState").textContent, "5分に戻しました");
+  } finally {
+    if (priorWindow === undefined) delete globalThis.window;
+    else globalThis.window = priorWindow;
+  }
+  const html = await read("../index.html");
+  const css = await read("../src/styles/accessibility.css");
+  assert.match(html, /aria-keyshortcuts="R"/);
+  assert.match(html, /aria-describedby="hourglassInstructions"/);
+  assert.match(html, /id="hourglassInstructions"/);
+  assert.ok(css.includes(".visually-hidden{"));
 });
 
 test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
