@@ -52,7 +52,7 @@
 | 砂時計 | `startHourglass`, `tickHourglass`, `resetHourglass` |
 | 外観・設定 | テーマとマークは `src/features/appearance-controller.js`。書斎全画面切替は `src/main.js` |
 | 環境音 | `startAmbient`, `setAmbientLayer`, `stopAmbient` |
-| バックアップ | インポートは `src/main.js` が形式検証・設定反映を調整。復旧候補UI・原文書き出し・安全な復元は `src/features/recovery-controller.js` |
+| バックアップ | 検証は `src/data/schema.js`。インポートの確認・退避・設定復元・統計置換の調整は `src/features/backup-import-controller.js`。復旧候補UI・原文書き出し・安全な復元は `src/features/recovery-controller.js` |
 
 ## 既存localStorageキー
 
@@ -63,7 +63,7 @@
 - `focus-room-quiet-text`
 - `focus-appearance`
 - `focus-mark`
-- `focus-preimport-backup`（インポート直前の自動退避）
+- `focus-preimport-backup`（インポート直前の自動退避。学習記録と設定を含む）
 - `focus-pre-migration-backup`（旧スキーマ移行前の退避）
 - `focus-corrupt-stats-backup`（破損したJSONの原文退避）
 - `focus-pre-recovery-raw-stats`（復元操作直前の統計データ退避）
@@ -266,3 +266,13 @@
 - Added tests for export-only corrupt data, JSON export, successful restore, listener cleanup, and aborting when the pre-restore snapshot cannot be saved.
 - Removed a stale pre-extraction appearance call path that referenced removed global theme functions; appearance initialization remains owned by `appearance-controller.js`.
 - Preview Service Worker cache advanced to v7. Production repository remains unchanged.
+
+
+## Backup import controller — 2026-11-22
+
+- Moved file selection, JSON parsing, schema validation handoff, confirmation, pre-import snapshot, settings application/rollback, and statistics replacement orchestration into `src/features/backup-import-controller.js`.
+- The controller writes the complete pre-import backup before touching settings or stats. If snapshot creation fails, import stops.
+- Settings are captured as exact raw storage values. If any setting write or the later stats write fails, the prior setting values are restored; absent keys are removed through the storage adapter.
+- Appearance and notification controllers expose non-persisting state application for this coordinated transaction, avoiding duplicate writes after the import controller has already persisted settings.
+- Statistics state is only published by `statsStore.replaceStats` after the stats payload is saved. A failed stats write leaves the prior stats state intact.
+- The backup JSON schema and existing storage keys remain unchanged. Preview cache advanced to v8.
