@@ -1,0 +1,269 @@
+/* A small study room that follows the real local season and time */
+.tabbar{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tab{font-size:9px;padding-left:1px;padding-right:1px}
+.tab span{font-size:16px}
+.study-room-panel{padding:14px;overflow:hidden}
+.study-room-view{--sky1:#8198a5;--sky2:#d8b9a0;--land:#52665d;position:relative;min-height:clamp(350px,62vh,540px);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#202c2b 0%,#29352f 100%);display:flex;flex-direction:column;justify-content:space-between;padding:18px;color:#f6f0e6}
+.study-room-view.time-dawn{--sky1:#687d9b;--sky2:#e8a982;--land:#59645b}
+.study-room-view.time-morning{--sky1:#78a9c2;--sky2:#d9e2d3;--land:#52715c}
+.study-room-view.time-day{--sky1:#6ca5c5;--sky2:#d5e6dc;--land:#4e765f}
+.study-room-view.time-evening{--sky1:#5a5273;--sky2:#e39a78;--land:#394b4a}
+.study-room-view.time-night{--sky1:#101b36;--sky2:#394765;--land:#172b30}
+.study-room-view.time-late{--sky1:#090f21;--sky2:#222d49;--land:#101f27}
+.study-room-view.season-spring{--season:#d4b5a0;--season-soft:#e7c9c0}
+.study-room-view.season-summer{--season:#9fbd91;--season-soft:#c1d1a2}
+.study-room-view.season-autumn{--season:#c58c62;--season-soft:#d7ad7d}
+.study-room-view.season-winter{--season:#a9bdce;--season-soft:#d1dce4}
+.study-room-top,.study-room-bottom{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.study-room-bottom{z-index:8;isolation:isolate}.study-room-clock,.study-room-date{position:relative;z-index:9}
+.study-room-kicker{font-size:10px;letter-spacing:2px;opacity:.78}
+.study-room-clock{font-size:clamp(26px,7vw,38px);font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.study-room-date{font-size:11px;opacity:.78;margin-top:3px}
+.study-window{position:absolute;inset:15% 8% 24%;border:9px solid #302d2a;border-radius:5px;box-shadow:0 0 0 2px rgba(244,226,195,.28),inset 0 0 0 2px rgba(255,255,255,.16),0 15px 35px rgba(0,0,0,.28);overflow:hidden;background:linear-gradient(180deg,var(--sky1),var(--sky2));}
+.study-window:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(255,255,255,.16),transparent 50%);z-index:2}
+.study-sun{position:absolute;width:clamp(38px,10vw,62px);height:clamp(38px,10vw,62px);border-radius:50%;left:var(--sun-x,68%);top:var(--sun-y,18%);background:#f2dfb5;box-shadow:0 0 40px 12px rgba(246,220,170,.22);opacity:.9}
+.time-night .study-sun,.time-late .study-sun{background:#dce2e8;box-shadow:0 0 30px 8px rgba(209,224,242,.2)}
+.study-hills{position:absolute;left:-8%;right:-8%;bottom:-3%;height:43%;background:linear-gradient(155deg,transparent 0 20%,var(--land) 20.5% 100%);clip-path:polygon(0 48%,18% 16%,34% 49%,56% 8%,76% 43%,100% 17%,100% 100%,0 100%)}
+.study-hills:after{content:"";position:absolute;inset:30% 0 0;background:linear-gradient(180deg,rgba(18,40,36,.05),rgba(13,34,31,.55))}
+.season-spring .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(7px 9px at 18% 72%,#f4c8d2 98%,transparent),radial-gradient(6px 8px at 26% 82%,#f4d8b0 98%,transparent),radial-gradient(7px 9px at 78% 68%,#f0c1cb 98%,transparent),radial-gradient(6px 8px at 87% 83%,#f4d8b0 98%,transparent);z-index:2;opacity:.9}
+.season-summer .study-hills{filter:saturate(1.35)}
+.season-autumn .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(9px 12px at 14% 70%,#c77d4d 98%,transparent),radial-gradient(8px 11px at 25% 82%,#d7a35e 98%,transparent),radial-gradient(9px 12px at 82% 69%,#b96d43 98%,transparent),radial-gradient(8px 11px at 90% 83%,#d7a35e 98%,transparent);z-index:2;opacity:.9}
+.season-winter .study-hills{background:linear-gradient(155deg,transparent 0 20%,#8499a2 20.5% 100%)}
+.season-winter .study-window:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 18% 70%,rgba(240,247,250,.7),transparent 35%),radial-gradient(ellipse at 80% 75%,rgba(240,247,250,.55),transparent 38%);z-index:2}
+.study-window-cross{position:absolute;z-index:4;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 49%,rgba(39,35,31,.75) 49.5% 50.5%,transparent 51%),linear-gradient(0deg,transparent 49%,rgba(39,35,31,.75) 49.5% 50.5%,transparent 51%)}
+.study-room-caption{max-width:260px;font-size:12px;line-height:1.9;opacity:.9}
+.study-room-season{font-size:11px;letter-spacing:1px;text-align:right}
+.study-room-title{font-size:22px;font-weight:500;letter-spacing:2px;margin:7px 0}
+.study-room-note{font-size:12px;color:var(--muted);line-height:1.9;margin:12px 2px 2px}
+.study-room-foot{font-size:10px;letter-spacing:1.5px;opacity:.62}
+@media(prefers-reduced-motion:no-preference){.study-sun{transition:top 1.2s ease,left 1.2s ease,background 1.2s ease}.study-window{transition:background 1.2s ease}}
+
+/* 2D picture-book view for the existing study room */
+.study-room-panel{padding:10px;background:transparent;border:0}
+.study-room-view{min-height:clamp(520px,78vh,760px);border-radius:22px;padding:18px;background:linear-gradient(180deg,#283c3b,#1e302b);box-shadow:0 20px 54px rgba(0,0,0,.24)}
+.study-window{inset:12% 6% 29%;border:13px solid #5a4435;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--sky1),var(--sky2));box-shadow:0 0 0 2px rgba(245,224,190,.5),inset 0 0 0 3px rgba(255,245,220,.3),0 20px 44px rgba(0,0,0,.36)}
+.study-window:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,rgba(255,255,255,.12),transparent 28% 72%,rgba(255,255,255,.08));z-index:3}
+.room-landscape{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.study-sun,.study-clouds,.study-hills{display:none!important}
+.study-weather-effects{z-index:2!important;pointer-events:none}
+.study-window-cross{z-index:4;background:linear-gradient(90deg,transparent 49.45%,rgba(58,43,33,.82) 49.7% 50.3%,transparent 50.55%),linear-gradient(0deg,transparent 49.45%,rgba(58,43,33,.82) 49.7% 50.3%,transparent 50.55%)}
+.study-window-glow{z-index:5;opacity:.7}
+.room-sun-disc{transform-box:fill-box;transform-origin:center;animation:room-sun-breathe 8s ease-in-out infinite alternate}
+.room-cloud{transform-box:fill-box;animation:room-cloud-drift 48s ease-in-out infinite alternate}
+.cloud-two{animation-duration:62s;animation-direction:alternate-reverse}
+.room-birds{transform-box:fill-box;animation:room-bird-glide 25s ease-in-out infinite alternate}
+.room-distant-trees{transform-box:fill-box;transform-origin:bottom;animation:room-trees-sway 8s ease-in-out infinite alternate}
+.room-floating-petals{animation:room-petal-drift 18s ease-in-out infinite alternate}
+.time-dawn .room-sun-disc,.time-morning .room-sun-disc,.time-day .room-sun-disc{fill:#f9e6b7}
+.time-evening .room-sun-disc{fill:#f2b98d}
+.time-night .room-sun-disc,.time-late .room-sun-disc{fill:#e5eaf2}
+.time-night .room-sun-glow,.time-late .room-sun-glow{opacity:.35}
+.season-spring .room-meadow{filter:hue-rotate(8deg) saturate(.9)}
+.season-summer .room-meadow{filter:saturate(1.22)}
+.season-autumn .room-meadow{filter:hue-rotate(-24deg) saturate(.92)}
+.season-winter .room-meadow{filter:grayscale(.38) brightness(1.12)}
+.season-winter .room-distant-trees{opacity:.48}
+.season-spring .room-floating-petals{animation-duration:12s}
+.study-room-view .room-desk-scene{bottom:7%;height:34%}
+.desk-surface{top:47%;height:17%;background:linear-gradient(180deg,#b18a65,#79563c 42%,#513827);border-top:5px solid rgba(238,202,157,.72);box-shadow:0 -10px 28px rgba(0,0,0,.25),0 18px 26px rgba(0,0,0,.32)}
+.desk-front{background:linear-gradient(90deg,#38271f,#79563d 48%,#3c2a20)}
+.room-plant{filter:drop-shadow(0 8px 6px rgba(0,0,0,.2))}
+.desk-books{filter:drop-shadow(0 5px 5px rgba(0,0,0,.2))}
+.desk-lamp{filter:drop-shadow(0 6px 9px rgba(0,0,0,.25))}
+@keyframes room-sun-breathe{from{transform:scale(.97);opacity:.86}to{transform:scale(1.04);opacity:1}}
+@keyframes room-cloud-drift{from{translate:-22px 2px}to{translate:30px -5px}}
+@keyframes room-bird-glide{from{translate:-10px 0}to{translate:18px -9px}}
+@keyframes room-trees-sway{from{transform:skewX(-1deg)}to{transform:skewX(1.3deg)}}
+@keyframes room-petal-drift{from{translate:-12px 5px;rotate:-8deg}to{translate:18px -9px;rotate:12deg}}
+@media(max-width:520px){.study-room-panel{padding:0}.study-room-view{min-height:clamp(560px,80vh,760px);padding:14px}.study-window{inset:14% 4% 31%;border-width:9px}.room-desk-scene{bottom:9%;height:31%}}
+@media(prefers-reduced-motion:reduce){.room-sun-disc,.room-cloud,.room-birds,.room-distant-trees,.room-floating-petals{animation:none!important}}
+
+/* Safe-area framing and richer animated scenery */
+.study-room-panel{padding:8px 10px 12px}
+.study-room-view{min-height:clamp(470px,67svh,620px);padding:calc(env(safe-area-inset-top,0px) + 18px) 18px 18px}
+.study-room-top{padding-top:2px;min-height:42px}
+.study-room-top-actions{gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.study-room-weather{max-width:min(34vw,190px)}
+.study-window{inset:16% 6% 32%;border-width:12px}
+.room-landscape{filter:saturate(.94) contrast(.98)}
+.room-mountains{transform-box:fill-box;transform-origin:center bottom;animation:room-mountain-haze 18s ease-in-out infinite alternate}
+.room-river{transform-box:fill-box;animation:room-water-shimmer 7s ease-in-out infinite alternate}
+.room-woodland{transform-box:fill-box;transform-origin:bottom center;animation:room-woodland-sway 6.5s ease-in-out infinite alternate}
+.room-woodland circle:nth-child(2n){animation:room-leaf-glint 5s ease-in-out infinite alternate}
+.room-cloud-one{animation-duration:42s}
+.room-cloud-two{animation-duration:58s}
+.room-curtain{position:absolute;z-index:2;top:0;bottom:0;width:13%;pointer-events:none;opacity:.94;filter:drop-shadow(0 5px 8px rgba(34,24,18,.18))}
+.room-curtain-left{left:0;background:linear-gradient(90deg,#80604b 0%,#b38a68 42%,#8b674f 74%,rgba(83,60,46,.18) 100%);clip-path:polygon(0 0,100% 0,84% 18%,100% 38%,83% 60%,100% 82%,85% 100%,0 100%)}
+.room-curtain-right{right:0;background:linear-gradient(270deg,#80604b 0%,#b38a68 42%,#8b674f 74%,rgba(83,60,46,.18) 100%);clip-path:polygon(0 0,100% 0,100% 100%,15% 100%,0 82%,17% 60%,0 38%,16% 18%)}
+.room-curtain:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,231,199,.12) 0 3px,transparent 3px 13px);opacity:.7}
+.study-window-cross{z-index:6}
+.study-window-glow{z-index:7}
+.study-weather-effects{z-index:4!important}
+.room-floating-petals ellipse{transform-box:fill-box;transform-origin:center;animation:room-petal-spin 8s ease-in-out infinite alternate}
+.room-floating-petals ellipse:nth-child(2){animation-delay:-3s;animation-duration:11s}
+.room-floating-petals ellipse:nth-child(3){animation-delay:-5s;animation-duration:9s}
+.room-birds{animation-duration:19s}
+.room-desk-scene{bottom:7%;height:32%}
+@keyframes room-mountain-haze{from{opacity:.42;translate:0 2px}to{opacity:.66;translate:0 -2px}}
+@keyframes room-water-shimmer{from{translate:-5px 0;opacity:.68}to{translate:8px -2px;opacity:.94}}
+@keyframes room-woodland-sway{from{transform:skewX(-1.6deg) scaleY(.99)}to{transform:skewX(1.8deg) scaleY(1.01)}}
+@keyframes room-leaf-glint{from{opacity:.58}to{opacity:1}}
+@keyframes room-petal-spin{from{rotate:-24deg;translate:-5px 3px}to{rotate:28deg;translate:9px -12px}}
+@media(max-width:520px){
+ .study-room-panel{padding:4px 5px 10px}
+ .study-room-view{min-height:clamp(465px,66svh,590px);padding:calc(env(safe-area-inset-top,0px) + 14px) 12px 14px;border-radius:18px}
+ .study-room-top{align-items:flex-start;min-height:48px}
+ .study-room-top-actions{gap:4px}
+ .study-room-weather{max-width:31vw;font-size:8px;padding:0 6px}
+ .room-text-toggle,.room-exit{flex:0 0 28px}
+ .study-window{inset:18% 4% 34%;border-width:9px}
+ .room-curtain{width:11%}
+ .room-desk-scene{bottom:8%;height:29%}
+}
+@media(orientation:landscape) and (max-height:520px){
+ .study-room-view{min-height:clamp(390px,82svh,500px);padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 12px}
+ .study-window{inset:16% 7% 29%}
+ .room-desk-scene{bottom:5%;height:31%}
+}
+@media(prefers-reduced-motion:reduce){
+ .room-mountains,.room-river,.room-woodland,.room-woodland circle,.room-floating-petals ellipse{animation:none!important}
+}
+
+/* Compact settings shortcut on the timer page */
+.timer-page-tools{display:flex;justify-content:flex-end;margin:0 2px 8px}
+.small-settings{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:6px 10px;font-size:11px;letter-spacing:.3px;min-height:30px}
+.small-settings:active{transform:scale(.97)}
+/* Quiet five-minute hourglass */
+.hourglass-panel{margin-top:14px;text-align:center;padding:18px 14px}
+.hourglass-heading{font-size:14px;letter-spacing:1px;margin:0 0 4px}
+.hourglass-sub{font-size:11px;color:var(--muted);margin:0 0 14px}
+.hourglass-stage{display:flex;align-items:center;justify-content:center;gap:20px;min-height:138px}
+.hourglass-art{width:76px;height:118px;overflow:visible;filter:drop-shadow(0 7px 10px rgba(0,0,0,.18))}
+.hourglass-frame{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;opacity:.88}
+.hourglass-glass{fill:rgba(210,226,218,.07);stroke:rgba(224,233,226,.7);stroke-width:2}
+.hourglass-sand-top{fill:var(--accent);transform-box:view-box;transform-origin:50px 12px;transition:transform .9s linear}
+.hourglass-sand-bottom{fill:var(--accent);transform-box:view-box;transform-origin:50px 108px;transition:transform .9s linear}
+.hourglass-stream{stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:3 5;stroke-dashoffset:0;opacity:0;transition:opacity .2s ease}
+.hourglass-art.is-running .hourglass-stream{opacity:1;animation:sand-flow .42s linear infinite}
+.hourglass-grain{fill:var(--accent);opacity:0;transform-box:view-box}
+.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall .9s linear infinite}
+.hourglass-art.is-running .hourglass-grain.grain-b{animation-delay:.3s}
+.hourglass-art.is-running .hourglass-grain.grain-c{animation-delay:.6s}
+.hourglass-readout{text-align:left;min-width:112px}
+.hourglass-time{font-size:clamp(32px,9vw,42px);font-weight:300;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.hourglass-state{font-size:11px;color:var(--muted);margin-top:4px;min-height:16px}
+.hourglass-presets{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+.hourglass-presets button{min-width:54px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-deep);color:var(--muted);font-size:11px}
+.hourglass-presets button.active{background:var(--accent2);border-color:var(--accent);color:var(--text)}
+.hourglass-controls{display:flex;justify-content:center;gap:8px}
+.hourglass-controls button{min-width:94px}
+.hourglass-foot{font-size:10px;color:var(--muted);margin:12px 0 0}
+@keyframes sand-flow{to{stroke-dashoffset:-16}}
+@keyframes sand-grain-fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(20px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.hourglass-art.is-running .hourglass-stream{animation:none;opacity:.7}}
+
+/* A wider, immersive study nook with a desk by the window */
+body.study-room-fullscreen{overflow:hidden}
+body.study-room-fullscreen main{max-width:none;height:100dvh;padding:0;gap:0}
+body.study-room-fullscreen header,body.study-room-fullscreen .tabbar,body.study-room-fullscreen .foot,body.study-room-fullscreen #toast{display:none}
+body.study-room-fullscreen #studyRoomPage{position:fixed;inset:0;z-index:80;display:block!important;overflow:auto;background:var(--bg);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+body.study-room-fullscreen .study-room-panel{height:100%;padding:10px;border:0;background:transparent}
+body.study-room-fullscreen .study-room-view{min-height:calc(100dvh - 20px);border-radius:18px}
+.study-room-top-actions{display:flex;align-items:center;gap:10px}
+.room-exit{border:1px solid rgba(255,255,255,.3);background:rgba(12,18,17,.25);color:#fff;border-radius:30px;padding:7px 11px;font-size:11px;backdrop-filter:blur(8px)}
+.study-window{inset:15% 7% 29%;border-width:11px;box-shadow:0 0 0 2px rgba(244,226,195,.3),inset 0 0 0 2px rgba(255,255,255,.16),0 20px 45px rgba(0,0,0,.3)}
+.study-window-glow{position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 48%,transparent 58%);mix-blend-mode:screen;pointer-events:none}
+.room-desk-scene{position:absolute;z-index:5;left:-2%;right:-2%;bottom:10%;height:32%;pointer-events:none}
+.desk-surface{position:absolute;left:0;right:0;top:49%;height:15%;background:linear-gradient(180deg,#9a7150,#654832 45%,#39291f);border-top:5px solid rgba(221,183,137,.65);box-shadow:0 -9px 24px rgba(0,0,0,.22),0 15px 24px rgba(0,0,0,.25)}
+.desk-front{position:absolute;left:4%;right:4%;top:64%;height:40%;background:linear-gradient(90deg,#4a3428,#76543a 45%,#4b3327);clip-path:polygon(0 0,100% 0,94% 100%,6% 100%);box-shadow:0 12px 20px rgba(0,0,0,.3)}
+.desk-hourglass{pointer-events:auto;touch-action:manipulation;-webkit-user-select:none;user-select:none;position:absolute;z-index:31;right:19%;top:0;width:112px;height:155px;border:0;background:transparent;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;padding:0 4px 8px;text-shadow:0 2px 8px rgba(0,0,0,.65);filter:drop-shadow(0 8px 9px rgba(0,0,0,.28))}
+.desk-hourglass:before{content:"";position:absolute;z-index:-1;bottom:4px;width:105px;height:15px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(5px)}
+.desk-hourglass .hourglass-art{width:58px;height:94px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35))}
+.desk-hourglass-time{font-size:16px;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.desk-hourglass-label{font-size:9px;opacity:.9;white-space:nowrap}
+.desk-books{position:absolute;left:18%;top:33%;z-index:7;display:flex;align-items:flex-end;gap:2px;transform:rotate(-4deg)}
+.desk-books i{display:block;width:16px;height:47px;border-radius:2px 2px 0 0;background:linear-gradient(90deg,#6d4b3b,#a97855,#583a30);box-shadow:2px 0 3px #30251f}
+.desk-books i:nth-child(2){height:55px;background:linear-gradient(90deg,#53655a,#8b9b7b,#34483d)}
+.desk-books i:nth-child(3){height:42px;background:linear-gradient(90deg,#8c6b45,#c09b65,#6e5036)}
+.desk-lamp{position:absolute;z-index:7;left:43%;top:6%;width:65px;height:92px}
+.desk-lamp:before{content:"";position:absolute;left:29px;top:30px;width:5px;height:54px;background:linear-gradient(90deg,#473b2c,#b39a6e,#53432f);transform:rotate(5deg)}
+.desk-lamp:after{content:"";position:absolute;left:7px;top:13px;width:48px;height:30px;background:linear-gradient(180deg,#d6bd8b,#806744);clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);filter:drop-shadow(0 0 16px rgba(245,207,139,.32))}
+.desk-lamp i{position:absolute;bottom:0;left:17px;width:38px;height:7px;border-radius:50%;background:#9b8058}
+.room-plant{position:absolute;z-index:7;left:7%;top:18%;width:42px;height:58px}
+.room-plant:before{content:"";position:absolute;bottom:0;left:5px;width:32px;height:22px;border-radius:3px 3px 9px 9px;background:linear-gradient(90deg,#795943,#c39b73,#684b38)}
+.room-plant i{position:absolute;bottom:17px;left:18px;width:15px;height:34px;border-radius:100% 0 100% 0;background:linear-gradient(135deg,#a3b28b,#526e53);transform:rotate(-25deg);transform-origin:bottom}
+.room-plant i:nth-child(2){transform:rotate(25deg);left:8px;height:29px}
+.room-plant i:nth-child(3){transform:rotate(2deg);left:16px;height:42px}
+.room-controls{display:flex;justify-content:center;align-items:center;gap:12px;padding:12px}
+body.study-room-fullscreen .room-controls{display:none}
+.study-room-note{position:relative;z-index:8;background:rgba(13,20,18,.22);padding:8px 12px;border-radius:10px;max-width:90%;margin:0 auto;text-align:center}
+@media(max-width:420px){.desk-hourglass{right:15%;transform:scale(.92);transform-origin:bottom center}.desk-lamp{left:43%}.room-plant{left:5%}}
+
+/* Weather-aware window and quiet ambient motion */
+.study-room-top-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.room-exit,.room-reset,.study-room-weather{height:27px;min-width:27px;border:1px solid rgba(255,255,255,.25);background:rgba(12,18,17,.2);color:#fff;border-radius:18px;backdrop-filter:blur(8px);font-size:10px}
+.room-exit{width:27px;padding:0;font-size:15px;line-height:1}
+.room-text-toggle{width:34px;padding:0;font-size:10px;letter-spacing:-.5px}
+.study-room-view.room-quiet-text .study-room-kicker,.study-room-view.room-quiet-text .study-room-title,.study-room-view.room-quiet-text .study-room-season,.study-room-view.room-quiet-text #studyRoomWeather,.study-room-view.room-quiet-text .study-room-bottom,.study-room-view.room-quiet-text .study-room-note,.study-room-view.room-quiet-text .desk-hourglass-label{display:none!important}
+.study-room-view.room-quiet-text .study-room-top{justify-content:flex-end}
+.study-room-view.room-quiet-text .study-room-top-actions{gap:7px}
+.study-room-view.room-quiet-text .room-text-toggle{border-color:rgba(255,255,255,.55);background:rgba(12,18,17,.48)}
+.room-reset{width:27px;padding:0;font-size:15px;line-height:1}
+.study-room-weather{padding:0 9px;font-size:9px;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.study-sun{animation:sun-breathe 7s ease-in-out infinite alternate;will-change:transform}
+.study-clouds{position:absolute;z-index:1;inset:0;opacity:0;pointer-events:none;transition:opacity 1.2s ease}
+.study-clouds:before,.study-clouds:after{content:"";position:absolute;width:100px;height:30px;border-radius:30px;background:rgba(244,246,241,.48);filter:blur(1px);box-shadow:20px -10px 0 -4px rgba(244,246,241,.42),-18px -5px 0 -7px rgba(244,246,241,.4)}
+.study-clouds:before{top:24%;left:15%;animation:cloud-drift 34s ease-in-out infinite alternate}
+.study-clouds:after{top:43%;left:62%;transform:scale(.72);opacity:.75;animation:cloud-drift 42s ease-in-out infinite alternate-reverse}
+.weather-cloudy .study-clouds,.weather-fog .study-clouds,.weather-rain .study-clouds,.weather-storm .study-clouds{opacity:.9}
+.weather-fog .study-clouds{filter:blur(9px);opacity:.7}
+.weather-rain .study-clouds:before,.weather-rain .study-clouds:after,.weather-storm .study-clouds:before,.weather-storm .study-clouds:after{background:rgba(105,125,137,.8);box-shadow:20px -10px 0 -4px rgba(105,125,137,.75),-18px -5px 0 -7px rgba(105,125,137,.7)}
+.weather-cloudy{--sky1:#84949b!important;--sky2:#b9c4c2!important}
+.weather-fog{--sky1:#9ba9a9!important;--sky2:#c4ceca!important}
+.weather-rain{--sky1:#536c7b!important;--sky2:#899ba2!important}
+.weather-storm{--sky1:#35495c!important;--sky2:#75828c!important}
+.weather-snow{--sky1:#9bb5c4!important;--sky2:#e0e8e8!important}
+.weather-night{--sky1:#101b36!important;--sky2:#394765!important}
+.weather-rain .study-weather-effects,.weather-storm .study-weather-effects{position:absolute;z-index:2;inset:-20%;opacity:.4;background:repeating-linear-gradient(108deg,transparent 0 19px,rgba(221,238,246,.35) 20px,transparent 21px 33px);animation:rain-fall 1.8s linear infinite;mask-image:linear-gradient(transparent,#000 12%,#000 88%,transparent)}
+.weather-snow .study-weather-effects{position:absolute;z-index:2;inset:-10%;background-image:radial-gradient(3px 3px at 14% 22%,rgba(255,255,255,.9) 98%,transparent),radial-gradient(2px 2px at 38% 65%,rgba(255,255,255,.8) 98%,transparent),radial-gradient(3px 3px at 76% 31%,rgba(255,255,255,.9) 98%,transparent),radial-gradient(2px 2px at 88% 74%,rgba(255,255,255,.8) 98%,transparent);background-size:160px 140px;animation:snow-fall 9s linear infinite}
+.weather-fog .study-weather-effects{position:absolute;z-index:2;inset:30% -15%;background:linear-gradient(180deg,transparent,rgba(239,242,235,.25),transparent);filter:blur(10px);animation:fog-drift 15s ease-in-out infinite alternate}
+.weather-night .study-sun{background:#e1e7ef!important;box-shadow:0 0 32px 9px rgba(209,224,242,.24)!important}
+.room-plant i{animation:leaf-sway 5s ease-in-out infinite alternate}
+.room-plant i:nth-child(2){animation-delay:-2s}.room-plant i:nth-child(3){animation-delay:-3.5s}
+.study-hills{animation:hill-breeze 12s ease-in-out infinite alternate}
+@keyframes sun-breathe{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+@keyframes cloud-drift{from{translate:-8px 0}to{translate:22px 3px}}
+@keyframes rain-fall{from{transform:translateY(-25px)}to{transform:translateY(35px)}}
+@keyframes snow-fall{from{background-position:0 -30px,0 -20px,0 -40px,0 -10px}to{background-position:25px 160px,-20px 120px,35px 140px,-10px 130px}}
+@keyframes fog-drift{from{transform:translateX(-6%);opacity:.45}to{transform:translateX(6%);opacity:.85}}
+@keyframes leaf-sway{from{transform:rotate(-27deg)}to{transform:rotate(-18deg)}}
+@keyframes hill-breeze{from{transform:translateX(-1px)}to{transform:translateX(2px)}}
+@media(prefers-reduced-motion:reduce){.study-sun,.study-clouds:before,.study-clouds:after,.study-weather-effects,.room-plant i,.study-hills{animation:none!important}}
+@media(max-width:420px){.study-room-top-actions{gap:4px}.study-room-weather{max-width:122px;font-size:8px}.room-exit,.room-reset{width:25px;min-width:25px;height:25px}}
+
+/* Nagoya study room landscape and desk hourglass styling */
+.room-exit{width:27px;height:27px;padding:0;display:grid;place-items:center;font-size:15px;line-height:1}
+.study-room-weather{font-size:9px;letter-spacing:.2px}
+.desk-hourglass{touch-action:pan-x pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.desk-hourglass:after{content:"";position:absolute;z-index:-1;bottom:5px;width:74px;height:9px;border-radius:3px;background:linear-gradient(180deg,#c79b65,#785033 48%,#4a3023);border:1px solid rgba(240,203,148,.55);box-shadow:0 3px 5px rgba(0,0,0,.3)}
+.desk-hourglass .hourglass-art{width:56px;height:92px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.22))}
+.desk-hourglass .hourglass-frame{stroke:#c9a36d;stroke-width:4.5;opacity:1}
+.desk-hourglass .hourglass-glass{fill:rgba(214,231,226,.2);stroke:rgba(239,235,213,.88);stroke-width:2.2}
+.desk-hourglass .hourglass-sand-top,.desk-hourglass .hourglass-sand-bottom{fill:#d9b477}
+.desk-hourglass .hourglass-stream{stroke:#e4c78f;stroke-width:2}
+.desk-hourglass-time{color:#f4e7ce;text-shadow:0 1px 3px rgba(0,0,0,.65);font-size:14px}
+.desk-hourglass-label{color:#ead9bd;font-size:8px;text-shadow:0 1px 3px rgba(0,0,0,.8);letter-spacing:.1px}
+body.study-room-fullscreen #studyRoomPage{overflow:hidden;padding:0!important}
+body.study-room-fullscreen .study-room-panel{height:100dvh;width:100vw;padding:0!important}
+body.study-room-fullscreen .study-room-view{width:100vw;height:100dvh;min-height:0!important;border-radius:0!important;padding:clamp(12px,2.2vw,26px);overflow:hidden}
+@media(orientation:landscape){
+ body.study-room-fullscreen .study-room-view{min-height:100dvh}
+ body.study-room-fullscreen .study-window{inset:10% 12% 27%;border-width:12px}
+ body.study-room-fullscreen .room-desk-scene{height:37%;bottom:6%;left:0;right:0}
+ body.study-room-fullscreen .desk-hourglass{right:24%;top:-4%;transform:scale(1.12);transform-origin:bottom center}
+ body.study-room-fullscreen .study-room-bottom{align-items:flex-end}
+}
+@media(orientation:portrait){
+ body.study-room-fullscreen #studyRoomPage:after{content:"端末を横向きにすると、書斎が画面いっぱいに広がります";position:fixed;z-index:100;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:90vw;text-align:center;padding:9px 14px;border-radius:20px;background:rgba(25,31,35,.72);color:#fff;font-size:11px;backdrop-filter:blur(8px);pointer-events:none}
+}
+@media(prefers-reduced-motion:reduce){.desk-hourglass .hourglass-art.is-running .hourglass-stream{animation:none}}
