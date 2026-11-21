@@ -75,7 +75,7 @@ function setStudyRoomMode(enabled){
 $('roomExit').addEventListener('click',()=>setStudyRoomMode(false));
 const savedQuietText=storage.getText('focus-room-quiet-text')==='true';$('studyRoomView').classList.toggle('room-quiet-text',savedQuietText);$('roomTextToggle').setAttribute('aria-pressed',String(savedQuietText));$('roomTextToggle').addEventListener('click',()=>{const view=$('studyRoomView'),hidden=!view.classList.contains('room-quiet-text'),button=$('roomTextToggle');if(!storage.setText('focus-room-quiet-text',String(hidden))){$('toast').textContent='表示設定を保存できなかったよ。';return}view.classList.toggle('room-quiet-text',hidden);button.setAttribute('aria-pressed',String(hidden));button.setAttribute('aria-label',hidden?'文字情報を表示する':'文字情報を隠す');button.title=hidden?'文字情報を表示する':'文字情報を隠す'});
 
-window.addEventListener('pagehide',()=>timerController.persistCurrent());
+
 const appearanceController=createAppearanceController({root:document,storage,onMessage:message=>{$('toast').textContent=message}});
 appearanceController.initialize();
 try{const ts=normalizeTimerSettings(storage.getJSON('focus-timer-settings',null));if(ts){durations={focus:ts.focus,short:ts.short,long:ts.long};$('focusDuration').value=ts.focus;$('shortDuration').value=ts.short;$('longDuration').value=ts.long;$('cycleDuration').value=ts.cycle;storage.setJSON('focus-timer-settings',ts)}}catch(e){}
@@ -170,3 +170,19 @@ const importController=createBackupImportController({
 if('serviceWorker'in navigator){let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;window.location.reload();}});window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').then(reg=>reg.update()).catch(()=>{}));}
 $('calendarPage').appendChild($('calendarPanel'));$('analyticsPage').appendChild($('analyticsPanel'));
 update();updateChart();appReady=true;recoveryController.render();
+let appDisposed=false;
+window.addEventListener('pagehide',event=>{
+ timerController.persistCurrent();
+ // Keep controllers alive when Safari stores this document in the BFCache.
+ if(event.persisted||appDisposed)return;
+ appDisposed=true;
+ timerController.destroy();
+ hourglass.destroy();
+ studyRoom.destroy();
+ ambientSound.destroy();
+ notificationController.destroy();
+ appearanceController.destroy();
+ recoveryController.destroy();
+ importController.destroy();
+},{once:true});
+
