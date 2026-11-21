@@ -912,7 +912,7 @@ test("timer controller restores active and expired runtimes safely", () => {
   assert.equal(h.controller.getState().mode, "long");
 
   let completions = 0;
-  const expired = createFakeTimerHarness({ onFocusComplete: () => completions++ });
+  const expired = createFakeTimerHarness({ now: 100000, onFocusComplete: () => completions++ });
   expired.store.setJSON("focus-timer-runtime", {
     mode: "focus", remaining: 0, deadline: expired.now() - 1000,
     running: true, finished: false, updatedAt: expired.now() - 61000
