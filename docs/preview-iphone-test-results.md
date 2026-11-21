@@ -70,3 +70,15 @@ Manual retest required on iPhone:
 - If all motion remains still, check iOS Settings > Accessibility > Motion > Reduce Motion. FOCUS intentionally respects that system preference.
 
 Production remains unchanged.
+
+
+## Phase 6 final manual retest — 2026-11-22
+
+The user confirmed the following preview checks passed on iPhone:
+
+- Study Room weather appears.
+- Weather and time refresh when the Study Room is shown again.
+- The app launches offline after its assets have been cached.
+- Backup export and import continue to work.
+
+These are user-reported checks of the preview deployment. They do not validate native iOS background execution or notification delivery while the app is suspended. Production remains unchanged.
