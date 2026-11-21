@@ -1,4 +1,4 @@
-const CACHE='focus-preview-pwa-v8';
+const CACHE='focus-preview-pwa-v9';
 const CACHE_PREFIX='focus-preview-';
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...BUILD_ASSETS];
@@ -21,6 +21,8 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
+  // Keep third-party APIs (notably live weather) out of the app-shell cache.
+  if(new URL(event.request.url).origin!==self.location.origin) return;
   if(event.request.mode==='navigate' || event.request.url.endsWith('/index.html')){
     event.respondWith(
       fetch(event.request)
