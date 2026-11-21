@@ -106,7 +106,6 @@ timerController=createTimerController({durations,getCycleLength:cycle,getComplet
 ({durations,mode,remaining,total,running,deadline,finished}=timerController.getState());
 try{const ap=storage.getJSON('focus-appearance',null);if(ap&&ap.theme)setTheme(ap.theme,false);setMark(storage.getText('focus-mark')||'dot',false)}catch(e){}
 
-$('clear').onclick=()=>{if(!confirm('今日の学習記録をリセットする？今日の詳細なセッション記録は削除されるけれど、累計の集中時間は保持されるよ。'))return;timerController.reset();statsStore.clearDayRecords(dateKey(new Date()));$('toast').textContent='今日の記録をリセットしたよ。';renderAllRecords()};
 statsStore=createStudyStatsStore({storage,onChange:syncStatsState});
 const statsLoad=statsStore.load();if(statsLoad.message)$('toast').textContent=statsLoad.message;
 timerController.restore();
@@ -128,7 +127,7 @@ function renderAllRecords(){update();updateChart();renderGoals();renderCalendar(
 function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}statsStore.updateRecord(r.id,{note:$('reflection').value.trim()});renderHistory();$('toast').textContent='振り返りを保存したよ。'}
 $('saveReflection').onclick=saveReflection;
 
-$('clearHistory').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();statsStore.clearDayRecords(dateKey(new Date()));$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
+$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();statsStore.clearDayRecords(dateKey(new Date()));$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
 
 
 const ambientLayers={};
