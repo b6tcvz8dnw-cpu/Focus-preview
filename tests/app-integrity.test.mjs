@@ -721,22 +721,28 @@ test("study room refresh preserves its structural class and visual state", async
 test("study room hourglass remains above decorative layers and accepts touch input", async () => {
   const css = await readStyles();
   const main = await read("../src/main.js");
-  assert.match(css, /\\.planet-hourglass\\{[^}]*z-index:30;pointer-events:auto;touch-action:manipulation/s);
-  assert.match(css, /\\.desk-hourglass\\{[^}]*pointer-events:auto;touch-action:manipulation/s);
+  assert.ok(css.includes(".planet-hourglass{"));
+  assert.ok(css.includes("z-index:30;pointer-events:auto;touch-action:manipulation"));
+  assert.ok(css.includes(".desk-hourglass{pointer-events:auto;touch-action:manipulation"));
   const hourglass = await read("../src/features/hourglass.js");
-  assert.match(main, /mountHourglass\\(\\{ getRemainingSeconds \\}\\)/);
-  assert.match(hourglass, /button\\.addEventListener\\('click'/);
-  assert.match(hourglass, /button\\.addEventListener\\('pointerdown'/);
-  assert.match(hourglass, /window\\.setInterval\\(tick, 1000\\)/);
-  assert.match(hourglass, /getState: \\(\\) => \\(\\{ duration, remaining, running, deadline \\}\\)/);
-});test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
+  assert.ok(main.includes("mountHourglass({ getRemainingSeconds })"));
+  assert.ok(hourglass.includes("button.addEventListener('click'"));
+  assert.ok(hourglass.includes("button.addEventListener('pointerdown'"));
+  assert.ok(hourglass.includes("window.setInterval(tick, 1000)"));
+  assert.ok(hourglass.includes("getState: () => ({ duration, remaining, running, deadline })"));
+});
+
+test("Study Room hourglass uses its full visible surface as a clearly labeled button", async () => {
   const css = await readStyles();
-  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*inset:0!important/);
-  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*width:100%!important;height:100%!important/);
-  assert.match(css, /\\.planet-hourglass \\.room-hourglass-shelf\\{[^}]*transform:none!important/);
-  assert.match(css, /\\.planet-hourglass \\.desk-hourglass-time\\{display:block!important/);
-  assert.match(css, /\\.planet-hourglass \\.desk-hourglass-label\\{display:block!important/);
-});test("study room contains active celestial motion and a reduced-motion fallback", async () => {
+  assert.ok(css.includes(".planet-hourglass .room-hourglass-shelf{"));
+  assert.ok(css.includes("inset:0!important"));
+  assert.ok(css.includes("width:100%!important;height:100%!important"));
+  assert.ok(css.includes("transform:none!important"));
+  assert.ok(css.includes(".planet-hourglass .desk-hourglass-time{display:block!important"));
+  assert.ok(css.includes(".planet-hourglass .desk-hourglass-label{display:block!important"));
+});
+
+test("study room contains active celestial motion and a reduced-motion fallback", async () => {
   const css = await readStyles();
   assert.ok(css.includes("@keyframes star-twinkle"));
   assert.ok(css.includes("@keyframes nebula-breathe"));
@@ -784,10 +790,11 @@ test("textless Study Room mode keeps only the hourglass countdown visible", asyn
   const css = await readStyles();
   const rule = css.split("\n").find(line => line.includes(".study-room-view.room-quiet-text .study-room-kicker"));
   assert.ok(rule);
-  assert.doesNotMatch(rule, /desk-hourglass-time/);
-  assert.match(rule, /desk-hourglass-label\\{display:none!important\\}/);
-  assert.match(css, /\\.desk-hourglass-time\\{font-size:16px/);
+  assert.ok(!rule.includes("desk-hourglass-time"));
+  assert.ok(rule.includes("desk-hourglass-label{display:none!important}"));
+  assert.ok(css.includes(".desk-hourglass-time{font-size:16px"));
 });
+
 test("CSS is split into ordered feature stylesheets without inline styles", async () => {
   const html = await read("../index.html");
   const entry = await read("../src/styles/main.css");
