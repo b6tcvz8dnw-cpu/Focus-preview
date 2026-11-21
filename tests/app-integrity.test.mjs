@@ -100,7 +100,7 @@ test("hourglass has visible falling-grain animation and viewBox-based sand scali
 
 test("hourglass CSS uses real rule separators and preview cache is versioned", async () => {
   const html = await read("../index.html");
-  assert.ok(!html.includes("\\\\n.hourglass"));
+  assert.ok(!html.includes("\\n.hourglass"));
   assert.ok(html.includes("\n.hourglass-grain{fill:var(--accent)"));
   assert.ok(html.includes("\n.hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
