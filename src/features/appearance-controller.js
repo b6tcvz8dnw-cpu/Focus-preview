@@ -40,12 +40,12 @@ export function createAppearanceController({ root, storage, onMessage = () => {}
   }
 
   function setTheme(name, { persist = true } = {}) {
-    theme = Object.hasOwn(THEMES, name) ? name : "green";
-    if (persist && !storage.setJSON("focus-appearance", { theme: name in THEMES ? name : "green", mark })) {
+    const nextTheme = Object.hasOwn(THEMES, name) ? name : "green";
+    if (persist && !storage.setJSON("focus-appearance", { theme: nextTheme, mark })) {
       onMessage("テーマを保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。");
       return false;
     }
-    theme = Object.hasOwn(THEMES, name) ? name : "green";
+    theme = nextTheme;
     renderTheme(theme);
     return getState();
   }
