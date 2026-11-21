@@ -22,6 +22,7 @@
 - テスト: Node.js標準テストランナー
 - モジュール: `src/core/date-time.js`（`formatClock`, `dateKey`, `buildWeekData`, `getStudySkyLevel`）
 - タイマー計算: `src/core/timer.js`（絶対時刻からの残り時間、不正値の防御、休憩モードの選択）
+- タイマー状態管理: `src/features/timer-controller.js`（開始・一時停止・リセット・モード変更・自動休憩・期限切れ復元・実行状態保存。DOM非依存、UI/統計/通知はコールバック注入）
 - 保存層: `src/data/storage.js`（文字列・JSONの読み書き、利用不可・不正JSONへの防御処理）
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
@@ -42,7 +43,7 @@
 
 | 領域 | 現在の関数例 |
 |---|---|
-| タイマー | `startTimer`, `stop`, `tick`, `complete`, `restoreTimerRuntime`。純粋計算は `src/core/timer.js` |
+| タイマー | 状態遷移・保存・復元は `src/features/timer-controller.js`。画面描画は `src/main.js` の `update` と `syncTimerState` |
 | 学習統計 | `save`, `recalculateStats`, `getWeekData`。集計本体は `src/data/records.js` |
 | カレンダー・履歴 | `renderCalendar`, `renderHistory`, `renderAllRecords` |
 | 分析 | `renderAnalytics`, `updateChart` |
@@ -196,3 +197,13 @@
 - The HTML now links the stylesheet through a Vite-relative path; no inline CSS remains. No selector, declaration, animation, or visual value was intentionally changed.
 - Updated regression tests to inspect the extracted stylesheets and added coverage for stylesheet ordering and absence of inline styles.
 - Automated validation and iPhone visual retest are required before any production integration.
+
+
+## Timer state controller extraction — 2026-11-21
+
+- Extracted the timer lifecycle into `src/features/timer-controller.js`. The controller owns mode, remaining seconds, total duration, running/finished state, absolute deadline, interval lifecycle, runtime persistence, restoration, and focus-to-break transitions.
+- The controller has no DOM dependency. It receives the storage adapter, clock, interval scheduler, cycle/session getters, and UI/statistics side effects through injected dependencies and callbacks.
+- `src/main.js` now acts as the UI adapter: it mirrors controller snapshots for rendering, sends user actions to the controller, and supplies focus-completion / break-completion callbacks for records, totals, notifications, and sounds.
+- The existing `focus-timer-runtime` and `focus-timer-settings` keys and runtime payload shape are preserved. Deadline-based timing and automatic break start remain unchanged.
+- Added deterministic tests for start/pause, deadline persistence, focus completion, automatic long-break selection, break completion, active/expired restoration, mode/skip/reset/duration changes, and page-suspension persistence.
+- iPhone Safari/PWA manual validation is still required before any production integration.
