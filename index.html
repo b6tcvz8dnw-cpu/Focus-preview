@@ -922,12 +922,12 @@ details summary{min-height:26px;display:flex;align-items:center}
 </section>
 <details class="panel"><summary>アチーブメント</summary><p class="muted" style="margin:12px 0 12px">累計の集中時間に応じて記録される達成バッジ。</p><div class="achievement-list" id="achievementList"></div><div class="achievement-next" id="achievementNext"></div></details>
 <section class="panel"><h2>目標の進み具合</h2><div id="goalProgress"></div><p class="muted" style="margin:10px 0 0">目標は設定画面から変更できるよ。達成できない日があっても、また次の日から始めれば大丈夫。</p></section>
-<section class="panel" id="calendarPanel"><div class="calendar-head"><button id="monthPrev" aria-label="前の月">‹</button><h2 id="calendarTitle" style="margin:0">月間カレンダー</h2><button id="monthNext" aria-label="次の月">›</button></div><div class="calendar-grid" id="calendarGrid"></div><p class="muted" style="margin:10px 0 0">丸印が大きい日ほど集中時間が長いよ。</p></section>
+
 <section class="panel" id="historyPanel"><h2>学習履歴</h2><div class="muted" style="margin:-4px 0 10px">最近の集中セッション。記録の削除や修正もできるよ。</div><input id="historySearch" type="search" placeholder="振り返りの言葉を検索" aria-label="履歴を検索"><label class="muted" style="display:flex;align-items:center;gap:8px;margin:0 0 10px"><input id="reflectionOnly" type="checkbox" style="width:auto;margin:0">振り返りがある記録だけ表示</label><div class="history-list" id="historyList"></div></section>
-<section class="panel" id="analyticsPanel"><h2>学習分析</h2><div class="muted" style="margin:-4px 0 10px">日・週・月ごとの記録を、静かに振り返るための集計。</div><div class="analytics-switch"><button class="secondary selected" data-analytics-range="day">日</button><button class="secondary" data-analytics-range="week">週</button><button class="secondary" data-analytics-range="month">月</button></div><div id="analyticsContent"></div></section>
+
 </div>
-<div class="page" id="calendarPage" hidden><section class="panel"><h2>月間カレンダー</h2><p class="muted" style="margin:-4px 0 12px">日ごとの学習時間を確認できるよ。</p></section></div>
-<div class="page" id="analyticsPage" hidden><section class="panel"><h2>学習分析</h2><p class="muted" style="margin:-4px 0 12px">曜日別の集中時間を確認できるよ。</p></section></div>
+<div class="page" id="calendarPage" hidden><section class="panel" id="calendarPanel"><div class="calendar-head"><button id="monthPrev" aria-label="前の月">‹</button><h2 id="calendarTitle" style="margin:0">月間カレンダー</h2><button id="monthNext" aria-label="次の月">›</button></div><div class="calendar-grid" id="calendarGrid"></div><p class="muted" style="margin:10px 0 0">丸印が大きい日ほど集中時間が長いよ。</p></section></div>
+<div class="page" id="analyticsPage" hidden><section class="panel" id="analyticsPanel"><h2>学習分析</h2><div class="muted" style="margin:-4px 0 10px">日・週・月ごとの記録を、静かに振り返るための集計。</div><div class="analytics-switch"><button class="secondary selected" data-analytics-range="day">日</button><button class="secondary" data-analytics-range="week">週</button><button class="secondary" data-analytics-range="month">月</button></div><div id="analyticsContent"></div></section></div>
 
 
 <div class="page" id="studyRoomPage" hidden>
