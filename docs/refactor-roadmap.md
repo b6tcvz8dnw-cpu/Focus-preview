@@ -300,3 +300,29 @@ Phase 7でも、端末間同期・アカウント機能・強制的な利用制�
 - Added integrity tests for required policy directives and to reject inline script blocks and inline event-handler attributes.
 - Preview only; awaiting CI/build and deployment. Verify theme switching, timer controls, Study Room weather, and PWA install/launch after the policy is live.
 
+## Phase 7 — CSP verification
+- The Preview deployment containing CSP completed successfully on commit `c54417d4d74ae40067df0f74d261b81c6bb14e6b`.
+- Quality workflow passed; the suite contains 122 tests and the production PWA build succeeded.
+- Static source audit found no inline JavaScript blocks or inline event-handler attributes. Existing inline style attributes and runtime CSS variables explain the temporary `style-src 'unsafe-inline'` allowance.
+- Study presentation templates use fixed markup and normalized numeric values; user-authored reflection text and record IDs are HTML-escaped before insertion. Recovery UI uses DOM construction and `textContent`.
+- Cross-origin application data request found: Open-Meteo weather endpoint only. Service Worker bypasses cross-origin requests.
+- Production repository `main` remains at `bb702cb7abad5256e08cecfe5a328884b1c036130`; no production changes.
+- Remaining manual validation: on iPhone, confirm timer, theme controls, weather, PWA launch/offline launch, and browser console has no CSP violations. Static/CI checks do not replace this device check.
+
+## Phase 8 — Pre-production audit (started)
+Purpose: establish that the Preview build is safe to promote before any production integration. No production merge or deployment is authorized by this phase.
+
+Audit workstreams:
+1. Reproducible build and dependency integrity: dependency lockfile, pinned installation, CI consistency, build artifact inspection.
+2. Data compatibility and recovery: legacy install migration, v2/v3 backup compatibility, failed writes, corrupt/future schemas, import size and validation boundaries.
+3. PWA and lifecycle: service-worker cache contents/update behavior, offline first launch vs previously cached launch, timer recovery and Safari lifecycle.
+4. Security and privacy: CSP behavior, DOM injection review, external network inventory, storage isolation between Preview and production.
+5. Accessibility and device behavior: keyboard/touch semantics, reduced motion, textless room, small-screen/notch/landscape layout, VoiceOver spot checks.
+6. Release safety: source diff review, rollback plan, release checklist, post-deploy smoke tests.
+
+Initial findings:
+- The repository currently has no `package-lock.json`; CI uses `npm install`. Although Vite itself is pinned in `package.json`, transitive dependency resolution is not fully locked. This is a reproducibility gap to resolve before promotion.
+- A local attempt to generate the lockfile could not reach the package registry in this environment. Do not hand-author a lockfile; generate and verify it in a network-enabled, trusted build environment.
+- Import and rendering code has existing schema normalization and escaping protections. The audit will add explicit limits for unusually large user-selected backup files only if they can be chosen without breaking legitimate backups.
+- Phase 8 is in progress; the Preview deployment remains separate from production.
+
