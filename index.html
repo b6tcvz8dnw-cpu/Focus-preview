@@ -22,7 +22,7 @@
 <div class="page" id="timerPage">
 <div class="timer-page-tools"><button class="small-settings" type="button" data-page="settingsPage" aria-label="設定を開く">⚙ 設定</button></div>
 <section class="panel" id="timerPanel">
- <div class="modes"><button class="mode active" data-mode="focus">集中</button><button class="mode" data-mode="short">短い休憩</button><button class="mode" data-mode="long">長い休憩</button></div>
+ <div class="modes"><button class="mode active" type="button" data-mode="focus" aria-pressed="true">集中</button><button class="mode" type="button" data-mode="short" aria-pressed="false">短い休憩</button><button class="mode" type="button" data-mode="long" aria-pressed="false">長い休憩</button></div>
  <div class="timer"><svg class="ring" viewBox="0 0 200 200" aria-hidden="true"><circle class="track" cx="100" cy="100" r="88"/><circle class="progress" id="progress" cx="100" cy="100" r="88"/></svg><div style="text-align:center"><div class="clock" id="clock" role="timer">25:00</div><div class="mode-label" id="modeLabel">集中する時間</div></div></div>
  <div class="controls"><button class="secondary" id="reset">↺ リセット</button><button class="primary" id="start">▶ スタート</button><button class="secondary" id="skip">次へ →</button><button class="secondary" id="largeToggle" aria-pressed="false">⛶ 大画面</button></div>
  <p class="hint" id="hint">25分間、ひとつのことに集中しよう。</p>
@@ -50,7 +50,7 @@
 
 </div>
 <div class="page" id="calendarPage" hidden><section class="panel" id="calendarPanel"><div class="calendar-head"><button id="monthPrev" aria-label="前の月">‹</button><h2 id="calendarTitle" style="margin:0">月間カレンダー</h2><button id="monthNext" aria-label="次の月">›</button></div><div class="calendar-grid" id="calendarGrid"></div><p class="muted" style="margin:10px 0 0">丸印が大きい日ほど集中時間が長いよ。</p></section></div>
-<div class="page" id="analyticsPage" hidden><section class="panel" id="analyticsPanel"><h2>学習分析</h2><div class="muted" style="margin:-4px 0 10px">日・週・月ごとの記録を、静かに振り返るための集計。</div><div class="analytics-switch"><button class="secondary selected" data-analytics-range="day">日</button><button class="secondary" data-analytics-range="week">週</button><button class="secondary" data-analytics-range="month">月</button></div><div id="analyticsContent"></div></section></div>
+<div class="page" id="analyticsPage" hidden><section class="panel" id="analyticsPanel"><h2>学習分析</h2><div class="muted" style="margin:-4px 0 10px">日・週・月ごとの記録を、静かに振り返るための集計。</div><div class="analytics-switch"><button class="secondary selected" type="button" data-analytics-range="day" aria-pressed="true">日</button><button class="secondary" type="button" data-analytics-range="week" aria-pressed="false">週</button><button class="secondary" type="button" data-analytics-range="month" aria-pressed="false">月</button></div><div id="analyticsContent"></div></section></div>
 
 
 <div class="page" id="studyRoomPage" hidden>
@@ -149,10 +149,10 @@
     </g>
    </svg>
    <div class="sky-progress-label" id="skyProgressLabel" aria-live="polite">今夜の星空</div>
-   <div class="room-window-shelf planet-hourglass"><button class="desk-hourglass room-hourglass-shelf" id="hourglassStart" type="button" aria-label="5分間の休憩を始める">
+   <div class="room-window-shelf planet-hourglass"><button class="desk-hourglass room-hourglass-shelf" id="hourglassStart" type="button" aria-label="5分間の休憩を始める" aria-describedby="hourglassInstructions" aria-keyshortcuts="R">
     <svg class="hourglass-art" id="hourglassArt" viewBox="0 0 100 120" role="img" aria-label="砂が落ちる砂時計"><path class="hourglass-frame" d="M27 7H73 M27 113H73 M31 9C31 35 48 43 50 60C52 77 69 85 69 111 M69 9C69 35 52 43 50 60C48 77 31 85 31 111"/><path class="hourglass-glass" d="M32 12C32 34 47 43 50 58C53 43 68 34 68 12Z M50 62C47 78 32 87 32 108H68C68 87 53 78 50 62Z"/><path class="hourglass-sand-top" id="hourglassSandTop" d="M35 15H65C64 31 57 39 50 48C43 39 36 31 35 15Z"/><path class="hourglass-sand-bottom" id="hourglassSandBottom" d="M35 105C37 89 43 82 50 74C57 82 63 89 65 105Z"/><path class="hourglass-stream" d="M50 48V74"/><circle class="hourglass-grain grain-a" cx="48.5" cy="50" r="1.5"/><circle class="hourglass-grain grain-b" cx="51.5" cy="50" r="1.5"/><circle class="hourglass-grain grain-c" cx="50" cy="50" r="1.6"/></svg>
     <span class="desk-hourglass-time" id="hourglassTime">05:00</span><span class="desk-hourglass-label" id="hourglassState">タップで休憩 · 長押しでリセット</span>
-   </button></div>
+   </button><span class="visually-hidden" id="hourglassInstructions">タップで開始または一時停止。長押し、またはこのボタンにフォーカスしてRキーを押すと5分にリセット。</span></div>
    <div class="study-room-bottom"><div><div class="study-room-clock" id="studyRoomClock">15:00</div><div class="study-room-date" id="studyRoomDate">11月21日 土曜日</div></div><div class="study-room-foot">A LITTLE WORLD, SOMEWHERE</div></div>
    <p class="study-room-note" id="studyRoomMessage">遠くの星にも、誰かの大切なものがある。</p>
   </div>
@@ -196,11 +196,11 @@
 </div>
 </section>
 <nav class="tabbar" aria-label="ページ切り替え">
- <button class="tab active" data-page="timerPage"><span>◷</span>タイマー</button>
- <button class="tab" data-page="overviewPage"><span>▥</span>概要</button>
- <button class="tab" data-page="calendarPage"><span>▦</span>カレンダー</button>
-  <button class="tab" data-page="analyticsPage"><span>⌁</span>分析</button>
- <button class="tab" data-page="studyRoomPage"><span>⌂</span>書斎</button>
+ <button class="tab active" type="button" data-page="timerPage" aria-current="page"><span>◷</span>タイマー</button>
+ <button class="tab" type="button" data-page="overviewPage"><span>▥</span>概要</button>
+ <button class="tab" type="button" data-page="calendarPage"><span>▦</span>カレンダー</button>
+  <button class="tab" type="button" data-page="analyticsPage"><span>⌁</span>分析</button>
+ <button class="tab" type="button" data-page="studyRoomPage"><span>⌂</span>書斎</button>
 
 </nav>
 <div class="foot"><span>FOCUS · STUDY TIMER</span></div><div id="toast" role="status" aria-live="polite"></div>
