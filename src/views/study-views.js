@@ -45,6 +45,7 @@ export function createStudyViews({ root = document } = {}) {
       ? Math.floor(sum / 60) + "時間" + (sum % 60 ? sum % 60 + "分" : "")
       : sum + "分";
     $("weekRange").textContent = data[0].key.slice(5).replace("-", "/") + " 〜 " + data[6].key.slice(5).replace("-", "/");
+    $("weekChart").setAttribute("aria-label", "直近7日間の日別学習時間。" + data.map(day => day.label + " " + day.minutes + "分").join("、"));
     $("weekChart").innerHTML = data.map(day => {
       const height = day.minutes ? Math.max(5, day.minutes / max * 100) : 0;
       return '<div class="day-col" aria-label="' + day.key + " " + day.minutes + '分"><div class="day-value">' + (day.minutes ? day.minutes + "分" : "–") + '</div><div class="bar-track"><div class="day-bar" style="height:' + height + '%"></div></div><div class="day-label">' + day.label + "</div></div>";
@@ -57,7 +58,8 @@ export function createStudyViews({ root = document } = {}) {
     const week = buildWeekData(history, now).reduce((total, day) => total + day.minutes, 0);
     const item = (label, value, goal) => {
       const progress = goal ? Math.min(100, value / goal * 100) : 0;
-      return '<div class="goal-line"><div class="goal-head"><span>' + label + '</span><b>' + value + " / " + (goal || "未設定") + '分</b></div><div class="goal-track"><div class="goal-fill" style="width:' + progress + '%"></div></div></div>';
+      const progressText = goal ? value + "分 / " + goal + "分" : value + "分、目標未設定";
+      return '<div class="goal-line"><div class="goal-head"><span>' + label + '</span><b>' + value + " / " + (goal || "未設定") + '分</b></div><div class="goal-track" role="progressbar" aria-label="' + label + 'の目標進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progress + '" aria-valuetext="' + progressText + '"><div class="goal-fill" style="width:' + progress + '%"></div></div></div>';
     };
     $("goalProgress").innerHTML = item("今日", today, dailyGoal) + item("今週", week, weeklyGoal);
   }
@@ -68,20 +70,23 @@ export function createStudyViews({ root = document } = {}) {
     const days = new Date(year, month + 1, 0).getDate();
     const cells = [];
     for (const weekday of ["日", "月", "火", "水", "木", "金", "土"]) {
-      cells.push('<div class="calendar-cell head">' + weekday + "</div>");
+      cells.push('<div class="calendar-cell head" aria-hidden="true">' + weekday + "</div>");
     }
     const max = Math.max(30, ...Array.from({ length: days }, (_, index) =>
       Number(history[dateKey(new Date(year, month, index + 1))] || 0)
     ));
-    for (let index = 0; index < first; index++) cells.push('<div class="calendar-cell"></div>');
+    for (let index = 0; index < first; index++) cells.push('<div class="calendar-cell" aria-hidden="true"></div>');
     for (let day = 1; day <= days; day++) {
       const key = dateKey(new Date(year, month, day));
       const value = Number(history[key] || 0);
       const heat = value ? Math.max(.15, value / max) : 0;
       const today = key === dateKey(new Date());
-      cells.push('<div class="calendar-cell ' + (today ? "today" : "") + '" title="' + value + '分"><span>' + day + '</span><i class="heat" style="--heat:' + heat + '"></i></div>');
+      const accessibleValue = value ? value + "分の集中記録" : "集中記録なし";
+      cells.push('<div class="calendar-cell ' + (today ? "today" : "") + '" role="img" aria-label="' + year + '年' + (month + 1) + '月' + day + '日、' + accessibleValue + '"' + (today ? ' aria-current="date"' : "") + '><span aria-hidden="true">' + day + '</span><i class="heat" aria-hidden="true" style="--heat:' + heat + '"></i></div>');
     }
     $("calendarTitle").textContent = year + "年 " + (month + 1) + "月";
+    $("calendarGrid").setAttribute("role", "group");
+    $("calendarGrid").setAttribute("aria-label", year + "年" + (month + 1) + "月の学習時間カレンダー");
     $("calendarGrid").innerHTML = cells.join("");
   }
 
