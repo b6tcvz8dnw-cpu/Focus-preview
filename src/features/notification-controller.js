@@ -19,14 +19,19 @@ export function createNotificationController({
   }
 
   function persist(next, { save = true } = {}) {
-    enabled = Boolean(next);
-    if (save) storage.setText("focus-notifications", String(enabled));
+    const value = Boolean(next);
+    if (save && !storage.setText("focus-notifications", String(value))) return false;
+    enabled = value;
     render();
+    return true;
   }
 
   async function toggle() {
     if (enabled) {
-      persist(false);
+      if (!persist(false)) {
+        onMessage("通知設定を保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。");
+        return false;
+      }
       onMessage("通知設定を保存したよ。");
       return true;
     }
@@ -50,7 +55,10 @@ export function createNotificationController({
       return false;
     }
 
-    persist(true);
+    if (!persist(true)) {
+      onMessage("通知設定を保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。");
+      return false;
+    }
     onMessage("通知設定を保存したよ。");
     return true;
   }
@@ -68,7 +76,7 @@ export function createNotificationController({
   }
 
   function setEnabled(next, { persist: shouldPersist = true } = {}) {
-    persist(next, { save: shouldPersist });
+    return persist(next, { save: shouldPersist });
   }
 
   render();
