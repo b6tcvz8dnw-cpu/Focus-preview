@@ -1255,7 +1255,15 @@ test("study stats store keeps its previous in-memory state when persistence fail
   assert.equal(h.store.addSession({
     id: "saved-after-retry", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: ""
   }), true);
-  assert.equal(h.store.getState().records[0].id, "saved-after-retry");
+  const persistedState = h.store.getState();
+  const persistedChanges = h.changes.length;
+  h.storage.setJSON = (key, value) => key === "focus-stats" ? false : originalSetJSON(key, value);
+  assert.equal(h.store.setGoals(120, 600), false);
+  assert.equal(h.store.updateRecord("saved-after-retry", { minutes: 30 }), false);
+  assert.equal(h.store.deleteRecord("saved-after-retry"), false);
+  assert.equal(h.store.clearDayRecords("2026-11-21"), false);
+  assert.deepEqual(h.store.getState(), persistedState);
+  assert.equal(h.changes.length, persistedChanges);
 });
 
 test("study stats store edits notes and durations, and deletes records without mutating old snapshots", () => {
