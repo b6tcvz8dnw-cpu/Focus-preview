@@ -43,6 +43,25 @@ test("essential pages and controls remain present", async () => {
   }
 });
 
+test("calendar and analytics panels are mounted in their matching tabs", async () => {
+  const html = await read("../index.html");
+  const overviewStart = html.indexOf('<div class="page" id="overviewPage"');
+  const calendarStart = html.indexOf('<div class="page" id="calendarPage"');
+  const analyticsStart = html.indexOf('<div class="page" id="analyticsPage"');
+  const roomStart = html.indexOf('<div class="page" id="studyRoomPage"');
+  assert.ok(overviewStart >= 0 && calendarStart > overviewStart);
+  assert.ok(analyticsStart > calendarStart && roomStart > analyticsStart);
+  const overview = html.slice(overviewStart, calendarStart);
+  const calendar = html.slice(calendarStart, analyticsStart);
+  const analytics = html.slice(analyticsStart, roomStart);
+  assert.ok(!overview.includes('id="calendarPanel"'));
+  assert.ok(!overview.includes('id="analyticsPanel"'));
+  assert.ok(calendar.includes('id="calendarPanel"'));
+  assert.ok(analytics.includes('id="analyticsPanel"'));
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("if(b.dataset.page==='calendarPage')renderCalendar()"));
+});
+
 test("HTML loads the external application module and its source parses", async () => {
   const html = await read("../index.html");
   assert.ok(html.includes('<script type="module" src="./src/main.js"></script>'));
