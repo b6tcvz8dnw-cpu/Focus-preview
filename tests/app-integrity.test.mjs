@@ -1466,8 +1466,8 @@ function createViewHarness() {
 
 test("study achievements skip redundant DOM renders until total minutes change", () => {
   const h = createViewHarness();
-  const list = h.elements.get("achievementList");
   h.views.renderAchievements(125);
+  const list = h.elements.get("achievementList");
   const firstMarkup = list.innerHTML;
   assert.equal(list.innerHTMLWrites, 1);
   h.views.renderAchievements(125);
