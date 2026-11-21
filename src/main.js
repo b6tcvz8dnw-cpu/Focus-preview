@@ -1,4 +1,4 @@
-import { formatClock as fmt, dateKey, buildWeekData, getStudySkyLevel } from './core/date-time.js';
+import { formatClock as fmt, dateKey, getStudySkyLevel } from './core/date-time.js';
 import { storage } from './data/storage.js';
 import { getRemainingSeconds } from './core/timer.js';
 import { normalizeTimerSettings, validateBackupPayload, CURRENT_BACKUP_VERSION } from './data/schema.js';
@@ -14,7 +14,6 @@ let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
 function cycle(){return Math.max(2,Math.min(8,+$('cycleDuration').value||4))}
 function syncStatsState(state){completed=state.completed;minutes=state.minutes;history=state.history;records=state.records;dailyGoal=state.dailyGoal;weeklyGoal=state.weeklyGoal}
-function getWeekData(){return buildWeekData(history)}
 function updateStudySky(){
  const todayMinutes=Math.max(0,Number(history[dateKey(new Date())]||0));
  const level=getStudySkyLevel(todayMinutes);
@@ -103,7 +102,6 @@ function renderHistory(){studyViews.renderHistory({records,query:$('historySearc
 $('historyList').onclick=e=>{const del=e.target.closest('[data-record-delete]'),edit=e.target.closest('[data-record-edit]');if(del){const id=del.dataset.recordDelete,r=records.find(x=>x.id===id);if(!r||!confirm('この学習記録を削除する？'))return;statsStore.deleteRecord(id);renderAllRecords()}else if(edit){const r=records.find(x=>x.id===edit.dataset.recordEdit);if(!r)return;const n=Number(prompt('このセッションの集中時間（分）',String(r.minutes)));if(!Number.isInteger(n)||n<1||n>120)return;statsStore.updateRecord(r.id,{minutes:n});renderAllRecords()}};
 let analyticsRange='day';
 function renderAnalytics(){studyViews.renderAnalytics({history,range:analyticsRange})}
-document.querySelectorAll('[data-analytics-range]').forEach(b=>b.classList.toggle('selected',b.dataset.analyticsRange===analyticsRange))}
 document.querySelectorAll('[data-analytics-range]').forEach(b=>b.addEventListener('click',()=>{analyticsRange=b.dataset.analyticsRange;renderAnalytics()}));
 $('historySearch').addEventListener('input',renderHistory);$('reflectionOnly').addEventListener('change',renderHistory);
 function renderAllRecords(){update();updateChart();renderGoals();renderCalendar();renderHistory();renderAnalytics()}
