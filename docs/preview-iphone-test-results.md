@@ -42,3 +42,8 @@ After the iPhone smoke test, the preview import flow was strengthened:
 - Application memory is updated only after the new stats are saved.
 - Automated coverage was expanded with three transaction failure-path tests.
 - Production remains unchanged.
+
+
+## PWA asset path follow-up
+
+A later document-head audit found root-relative manifest and icon URLs that are not appropriate for a GitHub Pages project path. These were changed to relative URLs and covered by a regression test. Please recheck Home Screen installation after the corrected deployment; the earlier manual check predates this fix.
