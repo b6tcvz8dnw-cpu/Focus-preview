@@ -67,8 +67,8 @@ export function createNotificationController({
     onMessage(title);
   }
 
-  function setEnabled(next) {
-    persist(next);
+  function setEnabled(next, { persist: shouldPersist = true } = {}) {
+    persist(next, { save: shouldPersist });
   }
 
   render();
