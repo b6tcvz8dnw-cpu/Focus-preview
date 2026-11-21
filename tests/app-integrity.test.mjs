@@ -1432,7 +1432,9 @@ test("stats replacement is transactional and only publishes after successful per
 function createViewHarness() {
   const elements = new Map();
   const makeElement = () => ({
-    innerHTML: "", textContent: "", classList: { toggle() {}, add() {}, remove() {} }
+    innerHTML: "", textContent: "", attributes: {},
+    setAttribute(name, value) { this.attributes[name] = String(value); },
+    classList: { toggle() {}, add() {}, remove() {} }
   });
   const root = {
     getElementById(id) {
@@ -1452,9 +1454,12 @@ test("study views render weekly totals and goal progress from supplied data only
   assert.equal(week.length, 7);
   assert.equal(h.elements.get("todayMinutes").textContent, 75);
   assert.equal(h.elements.get("weekTotal").textContent, "1時間40分");
+  assert.match(h.elements.get("weekChart").attributes["aria-label"], /75分/);
   h.views.renderGoals({ history, dailyGoal: 90, weeklyGoal: 180, now });
   assert.match(h.elements.get("goalProgress").innerHTML, /75 \/ 90分/);
   assert.match(h.elements.get("goalProgress").innerHTML, /100 \/ 180分/);
+  assert.match(h.elements.get("goalProgress").innerHTML, /role="progressbar"/);
+  assert.match(h.elements.get("goalProgress").innerHTML, /aria-valuetext="75分 \/ 90分"/);
 });
 
 test("study views render calendar dates and escape reflection text in history", () => {
@@ -1462,7 +1467,11 @@ test("study views render calendar dates and escape reflection text in history", 
   const history = { "2026-11-21": 45 };
   h.views.renderCalendar({ history, cursor: new Date(2026, 10, 1) });
   assert.equal(h.elements.get("calendarTitle").textContent, "2026年 11月");
-  assert.match(h.elements.get("calendarGrid").innerHTML, /title="45分"/);
+  assert.equal(h.elements.get("calendarGrid").attributes.role, "group");
+  assert.match(h.elements.get("calendarGrid").attributes["aria-label"], /2026年11月の学習時間カレンダー/);
+  assert.match(h.elements.get("calendarGrid").innerHTML, /2026年11月21日、45分の集中記録/);
+  assert.match(h.elements.get("calendarGrid").innerHTML, /aria-current="date"/);
+  assert.match(h.elements.get("calendarGrid").innerHTML, /aria-hidden="true"/);
   h.views.renderHistory({
     records: [{ id: "safe-id", timestamp: 1795219200000, minutes: 25, note: "<script>alert(1)</script>" }]
   });
