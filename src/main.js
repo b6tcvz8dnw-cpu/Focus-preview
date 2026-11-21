@@ -6,6 +6,7 @@ import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURR
 import { inspectRecoverySnapshots } from './data/recovery.js';
 import { writeStatsWithBackup } from './data/transactions.js';
 import { mountHourglass } from './features/hourglass.js';
+import { mountStudyRoom } from './features/study-room.js';
 const $=id=>document.getElementById(id);
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,interval=null,completed=0,minutes=0,finished=false,history={},records=[],legacyCompleted=0,legacyMinutes=0,legacyHistory={},statsWriteBlocked=false,dailyGoal=60,weeklyGoal=300,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false;
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
@@ -74,25 +75,9 @@ $('skip').onclick=()=>{if(mode==='focus')setMode((completed+1)%cycle()===0?'long
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 $('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマーの設定を変更すると、現在のセッションは最初からになるよ。変更してもいい？'))return;let vals={focus:+$('focusDuration').value,short:+$('shortDuration').value,long:+$('longDuration').value,cycle:+$('cycleDuration').value};if(vals.focus<1||vals.focus>120||vals.short<1||vals.short>60||vals.long<1||vals.long>90||vals.cycle<2||vals.cycle>8||Object.values(vals).some(v=>!Number.isInteger(v))){$('toast').textContent='設定値を範囲内の整数で入力してね。';return}durations={focus:vals.focus,short:vals.short,long:vals.long};stop();finished=false;remaining=durations[mode]*60;total=remaining;storage.setJSON('focus-timer-settings',vals);$('toast').textContent='タイマー設定を保存したよ。';update()};
 
-document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('[data-page]').forEach(t=>t.classList.toggle('active',t===b));if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){updateStudyRoom();loadStudyRoomWeather()}});
-
-const studyRoomSeasons=[
- {id:'spring',name:'春',months:[2,3,4],message:'花の気配が、窓の向こうに少しずつ増えていく。'},
- {id:'summer',name:'夏',months:[5,6,7],message:'光の強い午後も、ここには静かな風が通っている。'},
- {id:'autumn',name:'秋',months:[8,9,10],message:'色づく景色を眺めながら、時間が過ぎるのを待とう。'},
- {id:'winter',name:'冬',months:[11,0,1],message:'冷たい空の下、部屋の中には穏やかな静けさがある。'}
-];
-const studyRoomTimes=[
- {id:'late',name:'深夜',from:0,to:5,sunX:'50%',sunY:'24%',message:'世界が静まり返るころ。ここでは何も急がなくていい。'},
- {id:'dawn',name:'明け方',from:5,to:7,sunX:'24%',sunY:'58%',message:'夜がほどけて、朝がゆっくり近づいてくる。'},
- {id:'morning',name:'朝',from:7,to:11,sunX:'28%',sunY:'16%',message:'新しい光が窓辺に届く。今日はまだ、始まったばかり。'},
- {id:'day',name:'昼',from:11,to:16,sunX:'68%',sunY:'10%',message:'明るい空の下、ただひと息つく時間。'},
- {id:'evening',name:'夕方',from:16,to:19,sunX:'76%',sunY:'54%',message:'空の色が変わっていくのを、ゆっくり眺めよう。'},
- {id:'night',name:'夜',from:19,to:24,sunX:'70%',sunY:'18%',message:'遠くの明かりを眺めながら、静かな夜を過ごそう。'}
-];
-
-const hourglass = mountHourglass({ getRemainingSeconds });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){hourglass.tick();updateStudyRoom();if(document.body.classList.contains('study-room-fullscreen'))loadStudyRoomWeather()}});
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('[data-page]').forEach(t=>t.classList.toggle('active',t===b));if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='stuconst hourglass = mountHourglass({ getRemainingSeconds });
+const studyRoom = mountStudyRoom({ updateSky: updateStudySky });
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(running)tick();hourglass.tick();studyRoom.onVisible()}});
 function setStudyRoomMode(enabled){
  document.body.classList.toggle('study-room-fullscreen',enabled);
  if(enabled&&screen.orientation&&typeof screen.orientation.lock==='function'){screen.orientation.lock('landscape').catch(()=>{})}
@@ -100,57 +85,8 @@ function setStudyRoomMode(enabled){
 }
 $('roomExit').addEventListener('click',()=>setStudyRoomMode(false));
 const savedQuietText=storage.getText('focus-room-quiet-text')==='true';$('studyRoomView').classList.toggle('room-quiet-text',savedQuietText);$('roomTextToggle').setAttribute('aria-pressed',String(savedQuietText));$('roomTextToggle').addEventListener('click',()=>{const view=$('studyRoomView'),hidden=view.classList.toggle('room-quiet-text'),button=$('roomTextToggle');storage.setText('focus-room-quiet-text',String(hidden));button.setAttribute('aria-pressed',String(hidden));button.setAttribute('aria-label',hidden?'文字情報を表示する':'文字情報を隠す');button.title=hidden?'文字情報を表示する':'文字情報を隠す'});
-let roomWeather=null,roomWeatherLoading=false,roomWeatherAttempted=false,roomWeatherFetchedAt=0;
-const roomWeatherLabels=code=>{if(code===0)return ['晴れ','☀'];if(code===1)return ['おおむね晴れ','🌤'];if(code===2)return ['晴れ時々くもり','⛅'];if(code===3)return ['くもり','☁'];if(code===45||code===48)return ['霧','🌫'];if([51,53,55,56,57].includes(code))return ['霧雨','🌦'];if([61,63,65,66,67,80,81,82].includes(code))return ['雨','🌧'];if([71,73,75,77,85,86].includes(code))return ['雪','❄'];if([95,96,99].includes(code))return ['雷雨','⛈'];return ['天気','☁']};
-function showRoomWeather(textValue){$('studyRoomWeather').textContent=textValue}
-function loadStudyRoomWeather(force=false){
- if(roomWeatherLoading||(!force&&roomWeatherAttempted&&Date.now()-roomWeatherFetchedAt<30*60*1000))return;
- roomWeatherAttempted=true;roomWeatherLoading=true;showRoomWeather('名古屋の天気を確認中…');
- (async()=>{
-  try{
-   const url='https://api.open-meteo.com/v1/forecast?latitude=35.1815&longitude=136.9066&current=temperature_2m,weather_code,wind_speed_10m,is_day&daily=weather_code,sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=1';
-   const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('weather');
-   const data=await response.json();if(!data.current)throw new Error('weather');
-   roomWeather={...data.current,sunrise:data.daily?.sunrise?.[0],sunset:data.daily?.sunset?.[0],high:data.daily?.temperature_2m_max?.[0],low:data.daily?.temperature_2m_min?.[0]};roomWeatherFetchedAt=Date.now();
-   applyRoomWeather();
-  }catch(e){showRoomWeather('名古屋の天気を取得できません · タップで再試行');roomWeatherAttempted=false}
-  finally{roomWeatherLoading=false}
- })();
-}
-function applyRoomWeather(){
- if(!roomWeather)return;
- const w=roomWeather,[label,icon]=roomWeatherLabels(w.weather_code),view=$('studyRoomView');
- view.classList.remove('weather-clear','weather-cloudy','weather-fog','weather-rain','weather-snow','weather-storm','weather-night');
- let cls='weather-cloudy';if(w.weather_code===0||w.weather_code===1)cls='weather-clear';else if(w.weather_code===45||w.weather_code===48)cls='weather-fog';else if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(w.weather_code))cls='weather-rain';else if([71,73,75,77,85,86].includes(w.weather_code))cls='weather-snow';else if([95,96,99].includes(w.weather_code))cls='weather-storm';
- if(w.is_day===0)view.classList.add('weather-night');view.classList.add(cls);
- const high=Number.isFinite(w.high)&&Number.isFinite(w.low)?' · '+Math.round(w.low)+'〜'+Math.round(w.high)+'°':'';
- showRoomWeather(icon+' '+label+' · '+Math.round(w.temperature_2m)+'°C'+high+' · 風 '+Math.round(w.wind_speed_10m)+'km/h');
- if(w.is_day===1&&w.sunrise&&w.sunset){const now=new Date(),parts=x=>{const m=x.match(/T(\d{2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):null},rise=parts(w.sunrise),set=parts(w.sunset),minutes=now.getHours()*60+now.getMinutes();if(rise!==null&&set!==null&&set>rise){const p=Math.max(0,Math.min(1,(minutes-rise)/(set-rise)));view.style.setProperty('--sun-x',(8+p*80)+'%');view.style.setProperty('--sun-y',(60-Math.sin(p*Math.PI)*48)+'%')}}
-}
-$('studyRoomWeather').addEventListener('click',()=>{roomWeatherAttempted=false;loadStudyRoomWeather(true)});
-function updateStudyRoom(){
- const now=new Date(),month=now.getMonth(),hour=now.getHours();
- const season=studyRoomSeasons.find(s=>s.months.includes(month))||studyRoomSeasons[0];
- const time=studyRoomTimes.find(t=>hour>=t.from&&hour<t.to)||studyRoomTimes[0];
- const view=$('studyRoomView');
- // Keep structural and user-state classes (little-planet-view, quiet-text,
- // weather states, etc.) intact; update only the date-dependent classes.
- for(const name of [...view.classList]){
-  if(name.startsWith('season-')||name.startsWith('time-'))view.classList.remove(name);
- }
- view.classList.add('season-'+season.id,'time-'+time.id);
- updateStudySky();
- view.style.setProperty('--sun-x',time.sunX);view.style.setProperty('--sun-y',time.sunY);
- $('studyRoomClock').textContent=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false});
- $('studyRoomDate').textContent=now.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'long'});
- $('studyRoomSeason').textContent=season.name+' · '+time.name;
- $('studyRoomMessage').textContent=season.message+' '+time.message;
- if(roomWeather)applyRoomWeather();
-}
-updateStudyRoom();
-window.setInterval(updateStudyRoom,60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(running)tick();updateStudyRoom()}});
-window.addEventListener('pagehide',()=>{if(running)remaining=getRemainingSeconds(deadline);persistTimer()});
+
+)remaining=getRemainingSeconds(deadline);persistTimer()});
 const themes={
  green:{bg:'#101915',panel:'#19251f',deep:'#111b16',line:'#304138',text:'#edf4ef',muted:'#9eafa4',accent:'#8ec5a3',accent2:'#294b38',tab:'rgba(16,25,21,.96)'},
  blue:{bg:'#101923',panel:'#192838',deep:'#111d29',line:'#30475a',text:'#edf4fb',muted:'#9eafc1',accent:'#8ab9e8',accent2:'#244765',tab:'rgba(16,25,35,.96)'},
