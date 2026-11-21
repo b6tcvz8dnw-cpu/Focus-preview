@@ -183,7 +183,6 @@ test("existing local storage keys are preserved", async () => {
   const appearanceController = await read("../src/features/appearance-controller.js");
   const recoveryController = await read("../src/features/recovery-controller.js");
   const backupImportController = await read("../src/features/backup-import-controller.js");
-  const backupImportController = await read("../src/features/backup-import-controller.js");
   const storage = await read("../src/data/storage.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
