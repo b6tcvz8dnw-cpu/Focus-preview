@@ -183,6 +183,7 @@ test("existing local storage keys are preserved", async () => {
   const appearanceController = await read("../src/features/appearance-controller.js");
   const recoveryController = await read("../src/features/recovery-controller.js");
   const backupImportController = await read("../src/features/backup-import-controller.js");
+  const backupImportController = await read("../src/features/backup-import-controller.js");
   const storage = await read("../src/data/storage.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
@@ -270,14 +271,16 @@ test("storage adapter reads and writes text and JSON", () => {
   const values = new Map();
   const fakeStorage = {
     getItem: (key) => values.has(key) ? values.get(key) : null,
-    setItem: (key, value) => values.set(key, String(value))
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key)
   };
   const store = createStorage(() => fakeStorage);
   assert.equal(store.getText("missing", "fallback"), "fallback");
   assert.equal(store.setText("theme", "night"), true);
   assert.equal(store.getText("theme"), "night");
   assert.equal(store.setJSON("settings", { focus: 25 }), true);
-  assert.deepEqual(store.getJSON("settings"), { focus: 25 });\n  assert.equal(store.removeText("theme"), true);\n  assert.equal(store.getText("theme", null), null);
+  assert.deepEqual(store.getJSON("settings"), { focus: 25 });
+  assert.equal(store.removeText("theme"), true);\n  assert.equal(store.getText("theme", null), null);
 });
 
 test("storage adapter supports a dedicated namespace without changing default keys", () => {
