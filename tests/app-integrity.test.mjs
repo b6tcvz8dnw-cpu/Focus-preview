@@ -143,11 +143,13 @@ test("core timer and Study Room functions remain present", async () => {
   const script = await read("../src/main.js");
   for (const name of [
     "startTimer", "persistTimer", "restoreTimerRuntime", "complete",
-    "tick", "startHourglass", "updateStudyRoom", "updateStudySky",
+    "tick", "updateStudyRoom", "updateStudySky",
     "loadStudyRoomWeather"
   ]) {
     assert.ok(script.includes("function " + name + "("), "missing function " + name);
   }
+  const hourglass = await read("../src/features/hourglass.js");
+  assert.ok(hourglass.includes("export function mountHourglass"));
 });
 
 test("existing local storage keys are preserved", async () => {
