@@ -45,7 +45,7 @@ export function createBackupImportController({
     try {
       const applied = applySettings(next);
       if (applied === false) {
-        rollbackSettings(currentSnapshot);
+        rollbackSettings(settingsSnapshot);
         onMessage("設定の保存に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。");
         return { ok: false, stage: "settings" };
       }
