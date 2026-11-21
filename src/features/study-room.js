@@ -74,6 +74,6 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
   const handleWeatherClick=()=>{roomWeatherAttempted=false;loadWeather(true);};
   $('studyRoomWeather').addEventListener('click',handleWeatherClick);
   update();
-  const interval=window.setInterval(update,60000);
+  const interval=window.setInterval(()=>{if(!root.hidden&&!$('studyRoomPage')?.hidden)update()},60000);
   return {update,updateSky,loadWeather,onVisible(){if(destroyed)return;update();if(root.body?.classList.contains('study-room-fullscreen'))loadWeather();},destroy(){destroyed=true;window.clearInterval(interval);if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherRequest?.abort();$('studyRoomWeather').removeEventListener('click',handleWeatherClick);}};
 }
