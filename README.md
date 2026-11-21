@@ -1,8 +1,12 @@
-# FOCUS — 学習集中タイマー
+# FOCUS — 開発プレビュー
 
-iPhoneのSafariでこのサイトを開き、「共有」→「ホーム画面に追加」でインストールできます。
+このリポジトリは、FOCUSの開発版を本番環境から分離して検証するためのものです。
 
-GitHub Pagesで配信する静的PWAです。タイマー、休憩切替、学習セッション記録、設定、オフラインキャッシュに対応しています。
+- プレビューURL: https://b6tcvz8dnw-cpu.github.io/Focus-preview/
+- 本番URL: https://b6tcvz8dnw-cpu.github.io/Focus/
+- 開発版の学習記録は `focus-preview:` 名前空間に保存し、本番版のlocalStorageキーと分離します。
+- Service Workerのキャッシュも `focus-preview-` の名前空間で管理します。
+- このリポジトリへの公開は、本番リポジトリの公開状態を変更しません。
 
 ## 開発
 
@@ -21,6 +25,6 @@ npm run build
 npm run preview
 ```
 
-本番成果物は `dist/` に生成されます。Viteのbaseは相対パス `./` なので、GitHub PagesのプロジェクトURL `/Focus/` 配下で利用できます。
+GitHub Actionsはpush時にテストとビルドを実行し、Pages公開ワークフローはmainブランチでビルド成功後にこのプレビューサイトだけを公開します。
 
-Service Workerはビルド時に生成されたハッシュ付きJS/CSSをプリキャッシュ対象へ追加します。公開前にはGitHub Actionsのビルド結果とiPhoneでの実機動作を確認してください。
+iPhone Safari/PWAでの実機動作、オフライン起動、バックグラウンド復帰は公開後に別途確認します。
