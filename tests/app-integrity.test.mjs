@@ -143,6 +143,13 @@ test("Study Room sky progression preserves all existing thresholds", () => {
   assert.equal(getStudySkyLevel(180), 4);
 });
 
+test("preview Service Worker only manages preview-owned caches", async () => {
+  const sw = await read("../public/sw.js");
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v1';"));
+  assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
+  assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
+});
+
 test("storage adapter reads and writes text and JSON", () => {
   const values = new Map();
   const fakeStorage = {
