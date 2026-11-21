@@ -1,0 +1,11 @@
+/* Accessibility and reduced-motion safeguards */
+:where(button,summary,input,textarea,[tabindex]):focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+button,summary{min-height:44px}
+.tab{min-height:48px}
+.small-settings{min-height:44px}
+.calendar-head button,.history-actions button{min-width:44px;min-height:44px}
+.study-room-weather{min-height:44px}
+.room-text-toggle,.room-exit{min-width:44px;min-height:44px;flex-basis:44px}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
