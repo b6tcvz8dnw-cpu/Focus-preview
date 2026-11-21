@@ -157,6 +157,24 @@ test("storage adapter reads and writes text and JSON", () => {
   assert.deepEqual(store.getJSON("settings"), { focus: 25 });
 });
 
+test("storage adapter supports a dedicated namespace without changing default keys", () => {
+  const data = new Map();
+  const fakeStorage = {
+    getItem: (key) => data.has(key) ? data.get(key) : null,
+    setItem: (key, value) => data.set(key, String(value))
+  };
+  const preview = createStorage(() => fakeStorage, { prefix: "focus-preview:" });
+  const production = createStorage(() => fakeStorage);
+
+  assert.equal(preview.setText("focus-stats", "preview"), true);
+  assert.equal(production.getText("focus-stats", null), null);
+  assert.equal(preview.getText("focus-stats"), "preview");
+  assert.equal(data.get("focus-preview:focus-stats"), "preview");
+  assert.equal(production.setText("focus-stats", "production"), true);
+  assert.equal(production.getText("focus-stats"), "production");
+  assert.equal(preview.getText("focus-stats"), "preview");
+});
+
 test("storage adapter safely handles malformed JSON and unavailable storage", () => {
   const fakeStorage = {
     getItem: () => "{broken",
