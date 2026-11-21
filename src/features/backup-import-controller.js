@@ -17,6 +17,11 @@ export function createBackupImportController({
     throw new TypeError("input, storage, statsStore, validate, and buildCurrentBackup are required");
   }
 
+  function rollbackSafely(snapshot) {
+    try { return rollbackSettings(snapshot) !== false; }
+    catch { return false; }
+  }
+
   async function importText(text) {
     let parsed;
     try {
@@ -35,8 +40,14 @@ export function createBackupImportController({
       return { ok: false, stage: "cancelled" };
     }
 
-    const currentSnapshot = buildCurrentBackup();
-    const settingsSnapshot = captureSettings();
+    let currentSnapshot, settingsSnapshot;
+    try {
+      currentSnapshot = buildCurrentBackup();
+      settingsSnapshot = captureSettings();
+    } catch {
+      onMessage("読み込み前の状態を確認できなかったため、読み込みを中止したよ。");
+      return { ok: false, stage: "snapshot" };
+    }
     if (!storage.setJSON("focus-preimport-backup", currentSnapshot)) {
       onMessage("端末内バックアップを作成できなかったため、読み込みを中止したよ。");
       return { ok: false, stage: "backup" };
@@ -47,22 +58,22 @@ export function createBackupImportController({
     try {
       const applied = applySettings(next);
       if (applied === false) {
-        rollbackSettings(settingsSnapshot);
-        onMessage("設定の保存に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。");
-        return { ok: false, stage: "settings" };
+        const rolledBack = rollbackSafely(settingsSnapshot);
+        onMessage(rolledBack ? "設定の保存に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。" : "設定の保存に失敗し、元の設定も完全には戻せなかったよ。再読み込みして状態を確認してね。退避データは残してあるよ。");
+        return { ok: false, stage: rolledBack ? "settings" : "rollback" };
       }
       settingsApplied = true;
     } catch {
-      rollbackSettings(settingsSnapshot);
-      onMessage("設定の反映に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。");
-      return { ok: false, stage: "settings" };
+      const rolledBack = rollbackSafely(settingsSnapshot);
+      onMessage(rolledBack ? "設定の反映に失敗したため、読み込みを中止したよ。読み込み前のデータは退避してあるよ。" : "設定の反映に失敗し、元の設定も完全には戻せなかったよ。再読み込みして状態を確認してね。退避データは残してあるよ。");
+      return { ok: false, stage: rolledBack ? "settings" : "rollback" };
     }
 
     const transaction = statsStore.replaceStats(next.stats);
     if (!transaction.ok) {
-      if (settingsApplied) rollbackSettings(settingsSnapshot);
-      onMessage("学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。");
-      return { ok: false, stage: "stats", transaction };
+      const rolledBack = settingsApplied ? rollbackSafely(settingsSnapshot) : true;
+      onMessage(rolledBack ? "学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。" : "学習記録の保存と設定の復元に失敗したよ。再読み込みして状態を確認してね。退避データは残してあるよ。");
+      return { ok: false, stage: rolledBack ? "stats" : "rollback", transaction };
     }
 
     onRefresh();
