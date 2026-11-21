@@ -9,6 +9,7 @@ import { createTimerController } from './features/timer-controller.js';
 import { mountStudyRoom } from './features/study-room.js';
 import { createStudyViews } from './views/study-views.js';
 import { createAmbientSoundController } from './features/ambient-sound.js';
+import { createNotificationController } from './features/notification-controller.js';
 const $=id=>document.getElementById(id);
 const studyViews=createStudyViews();
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],dailyGoal=60,weeklyGoal=300,statsStore=null,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false,timerController=null;
@@ -38,11 +39,15 @@ function update(){
  document.title=fmt(remaining)+' | FOCUS';
  document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
 }
-let notificationsEnabled=storage.getText('focus-notifications')==='true';
-function updateNotificationButton(){$('notificationToggle').textContent='完了通知：'+(notificationsEnabled?'オン':'オフ');$('notificationToggle').setAttribute('aria-pressed',String(notificationsEnabled))}
-$('notificationToggle').onclick=async()=>{if(!notificationsEnabled){if(!('Notification'in window)){$('toast').textContent='このブラウザは通知に対応していないようだよ。';return}const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;if(permission!=='granted'){$('toast').textContent='通知は許可されなかったため、オフのままだよ。';return}notificationsEnabled=true}else notificationsEnabled=false;storage.setText('focus-notifications',String(notificationsEnabled));updateNotificationButton();$('toast').textContent='通知設定を保存したよ。'};
-function notify(title){if(notificationsEnabled&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body:'FOCUS — 学習タイマー'})}catch(e){}}$('toast').textContent=title}
-updateNotificationButton();
+let notificationsEnabled=false;
+const notificationController=createNotificationController({
+ root:document,
+ storage,
+ getNotificationApi:()=>window.Notification,
+ onMessage:message=>{$('toast').textContent=message},
+ onStateChange:enabled=>{notificationsEnabled=enabled}
+});
+function notify(title){notificationController.notify(title)}
 function playCompletionSound(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=audioContext||new C();audioContext=c;c.resume().then(()=>{[660,880].forEach((hz,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.16;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.42);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45)})}).catch(()=>{})}catch(e){}}
 $('start').onclick=()=>{if(running){timerController.pause();return}if(finished){$('toast').textContent='次のモードを選んでスタートしよう。';return}timerController.start()};
 function setLargeMode(enabled){document.body.classList.toggle('timer-large-mode',enabled);$('largeToggle').setAttribute('aria-pressed',String(enabled));$('largeToggle').textContent=enabled?'⤢ 通常表示':'⛶ 大画面';}
@@ -171,7 +176,7 @@ $('recoveryList').onclick=e=>{
  if(restore)restoreRecoverySnapshot(restore.dataset.recoveryRestore);
 };
 
-$('importData').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text()),checked=validateBackupPayload(parsed);if(!checked.valid){$('toast').textContent=checked.reason;return}if(!confirm('現在の学習記録をバックアップの内容で置き換える？\n読み込み前の状態も端末内に退避するよ。'))return;const snapshot=buildBackupPayload(),obj=checked.data,s=obj.stats;const transaction=statsStore.replaceStats(s,{backupKey:'focus-preimport-backup',backupPayload:snapshot});if(!transaction.ok){$('toast').textContent=transaction.stage==='backup'?'端末内バックアップを作成できなかったため、読み込みを中止したよ。':'学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。';return}if(obj.timerSettings)storage.setJSON('focus-timer-settings',obj.timerSettings);if(obj.appearance&&obj.appearance.theme){setTheme(obj.appearance.theme);setMark(obj.mark)}else if(obj.mark)setMark(obj.mark);if(typeof obj.notificationsEnabled==='boolean'){notificationsEnabled=obj.notificationsEnabled;storage.setText('focus-notifications',String(notificationsEnabled));updateNotificationButton()}if(typeof obj.quietText==='boolean'){storage.setText('focus-room-quiet-text',String(obj.quietText));$('studyRoomView').classList.toggle('room-quiet-text',obj.quietText);$('roomTextToggle').setAttribute('aria-pressed',String(obj.quietText))}$('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;renderAllRecords();renderRecovery();$('toast').textContent='バックアップを読み込んだよ。読み込み前のデータは端末内に退避してあるよ。ページを再読み込みすると設定も反映されるよ。'}catch(err){$('toast').textContent='ファイルを読み込めなかったよ。JSONの形式を確認してね。'}finally{e.target.value=''}};
+$('importData').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text()),checked=validateBackupPayload(parsed);if(!checked.valid){$('toast').textContent=checked.reason;return}if(!confirm('現在の学習記録をバックアップの内容で置き換える？\n読み込み前の状態も端末内に退避するよ。'))return;const snapshot=buildBackupPayload(),obj=checked.data,s=obj.stats;const transaction=statsStore.replaceStats(s,{backupKey:'focus-preimport-backup',backupPayload:snapshot});if(!transaction.ok){$('toast').textContent=transaction.stage==='backup'?'端末内バックアップを作成できなかったため、読み込みを中止したよ。':'学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。';return}if(obj.timerSettings)storage.setJSON('focus-timer-settings',obj.timerSettings);if(obj.appearance&&obj.appearance.theme){setTheme(obj.appearance.theme);setMark(obj.mark)}else if(obj.mark)setMark(obj.mark);if(typeof obj.notificationsEnabled==='boolean'){notificationController.setEnabled(obj.notificationsEnabled)}if(typeof obj.quietText==='boolean'){storage.setText('focus-room-quiet-text',String(obj.quietText));$('studyRoomView').classList.toggle('room-quiet-text',obj.quietText);$('roomTextToggle').setAttribute('aria-pressed',String(obj.quietText))}$('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;renderAllRecords();renderRecovery();$('toast').textContent='バックアップを読み込んだよ。読み込み前のデータは端末内に退避してあるよ。ページを再読み込みすると設定も反映されるよ。'}catch(err){$('toast').textContent='ファイルを読み込めなかったよ。JSONの形式を確認してね。'}finally{e.target.value=''}};
 
 if('serviceWorker'in navigator){let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;window.location.reload();}});window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').then(reg=>reg.update()).catch(()=>{}));}
 $('calendarPage').appendChild($('calendarPanel'));$('analyticsPage').appendChild($('analyticsPanel'));
