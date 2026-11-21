@@ -43,7 +43,7 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
     }
   }
   async function loadWeather(force=false){
-    if(roomWeatherLoading||(!force&&roomWeatherAttempted&&Date.now()-roomWeatherFetchedAt<30*60*1000))return;
+    if(destroyed||roomWeatherLoading||(!force&&roomWeatherAttempted&&Date.now()-roomWeatherFetchedAt<30*60*1000))return;
     roomWeatherAttempted=true;roomWeatherLoading=true;showWeather('名古屋の天気を確認中…');
     weatherRequest=typeof AbortController==='function'?new AbortController():null;
     if(weatherRequest)weatherTimeout=window.setTimeout(()=>weatherRequest?.abort(),10000);
