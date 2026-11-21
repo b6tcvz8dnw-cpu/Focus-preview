@@ -12,6 +12,7 @@ import { createAmbientSoundController } from './features/ambient-sound.js';
 import { createNotificationController } from './features/notification-controller.js';
 import { createAppearanceController } from './features/appearance-controller.js';
 import { createRecoveryController } from './features/recovery-controller.js';
+import { createBackupImportController } from './features/backup-import-controller.js';
 const $=id=>document.getElementById(id);
 const studyViews=createStudyViews();
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],dailyGoal=60,weeklyGoal=300,statsStore=null,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false,timerController=null;
@@ -125,7 +126,44 @@ $('soundVolume').oninput=()=>ambientSound.setVolume(Number($('soundVolume').valu
 function buildBackupPayload(){return {app:'FOCUS',version:CURRENT_BACKUP_VERSION,exportedAt:new Date().toISOString(),stats:statsStore.exportStats(),timerSettings:normalizeTimerSettings(storage.getJSON('focus-timer-settings',null)),appearance:storage.getJSON('focus-appearance',null),mark:storage.getText('focus-mark')||'dot',notificationsEnabled,quietText:storage.getText('focus-room-quiet-text')==='true'}}
 function downloadBackup(payload,filename){const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('exportData').onclick=()=>{downloadBackup(buildBackupPayload(),'focus-backup-'+dateKey(new Date())+'.json');$('toast').textContent='バックアップを書き出したよ。'};
-$('importData').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text()),checked=validateBackupPayload(parsed);if(!checked.valid){$('toast').textContent=checked.reason;return}if(!confirm('現在の学習記録をバックアップの内容で置き換える？\n読み込み前の状態も端末内に退避するよ。'))return;const snapshot=buildBackupPayload(),obj=checked.data,s=obj.stats;const transaction=statsStore.replaceStats(s,{backupKey:'focus-preimport-backup',backupPayload:snapshot});if(!transaction.ok){$('toast').textContent=transaction.stage==='backup'?'端末内バックアップを作成できなかったため、読み込みを中止したよ。':'学習記録の保存に失敗したよ。読み込み前のデータは保護してあるので、再読み込みして状態を確認してね。';return}if(obj.timerSettings)storage.setJSON('focus-timer-settings',obj.timerSettings);if(obj.appearance&&obj.appearance.theme){appearanceController.setTheme(obj.appearance.theme);appearanceController.setMark(obj.mark)}else if(obj.mark)appearanceController.setMark(obj.mark);if(typeof obj.notificationsEnabled==='boolean'){notificationController.setEnabled(obj.notificationsEnabled)}if(typeof obj.quietText==='boolean'){storage.setText('focus-room-quiet-text',String(obj.quietText));$('studyRoomView').classList.toggle('room-quiet-text',obj.quietText);$('roomTextToggle').setAttribute('aria-pressed',String(obj.quietText))}$('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;renderAllRecords();recoveryController.render();$('toast').textContent='バックアップを読み込んだよ。読み込み前のデータは端末内に退避してあるよ。ページを再読み込みすると設定も反映されるよ。'}catch(err){$('toast').textContent='ファイルを読み込めなかったよ。JSONの形式を確認してね。'}finally{e.target.value=''}};
+const importController=createBackupImportController({
+ input:$('importData'),storage,statsStore,validate:validateBackupPayload,
+ buildCurrentBackup:()=>buildBackupPayload(),
+ captureSettings:()=>Object.fromEntries(['focus-timer-settings','focus-appearance','focus-mark','focus-notifications','focus-room-quiet-text'].map(key=>[key,storage.getText(key,null)])),
+ confirmAction:message=>confirm(message),
+ applySettings:obj=>{
+  const writes=[];
+  if(obj.timerSettings)writes.push(storage.setJSON('focus-timer-settings',obj.timerSettings));
+  if(obj.appearance&&obj.appearance.theme)writes.push(storage.setJSON('focus-appearance',{theme:obj.appearance.theme}));
+  if(obj.mark)writes.push(storage.setText('focus-mark',obj.mark));
+  if(typeof obj.notificationsEnabled==='boolean')writes.push(storage.setText('focus-notifications',String(obj.notificationsEnabled)));
+  if(typeof obj.quietText==='boolean')writes.push(storage.setText('focus-room-quiet-text',String(obj.quietText)));
+  if(writes.some(ok=>!ok))return false;
+  if(obj.appearance&&obj.appearance.theme)appearanceController.setTheme(obj.appearance.theme,{persist:false});
+  if(obj.mark)appearanceController.setMark(obj.mark,{persist:false});
+  if(typeof obj.notificationsEnabled==='boolean')notificationController.setEnabled(obj.notificationsEnabled,{persist:false});
+  if(typeof obj.quietText==='boolean'){$('studyRoomView').classList.toggle('room-quiet-text',obj.quietText);$('roomTextToggle').setAttribute('aria-pressed',String(obj.quietText))}
+  return true;
+ },
+ rollbackSettings:previous=>{
+  let ok=true;
+  for(const [key,value] of Object.entries(previous)){
+   const saved=value===null?storage.removeText(key):storage.setText(key,value);
+   if(!saved)ok=false;
+  }
+  let appearance=null;
+  try{appearance=previous['focus-appearance']===null?null:JSON.parse(previous['focus-appearance'])}catch{}
+  appearanceController.setTheme(appearance?.theme||'green',{persist:false});
+  appearanceController.setMark(previous['focus-mark']||'dot',{persist:false});
+  notificationController.setEnabled(previous['focus-notifications']==='true',{persist:false});
+  const quiet=previous['focus-room-quiet-text']==='true';
+  $('studyRoomView').classList.toggle('room-quiet-text',quiet);
+  $('roomTextToggle').setAttribute('aria-pressed',String(quiet));
+  return ok;
+ },
+ onRefresh:()=>{$('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;renderAllRecords();recoveryController.render()},
+ onMessage:message=>{$('toast').textContent=message}
+});
 
 if('serviceWorker'in navigator){let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing){refreshing=true;window.location.reload();}});window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').then(reg=>reg.update()).catch(()=>{}));}
 $('calendarPage').appendChild($('calendarPanel'));$('analyticsPage').appendChild($('analyticsPanel'));
