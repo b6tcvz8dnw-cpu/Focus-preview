@@ -21,7 +21,7 @@ import { createAmbientSoundController } from "../src/features/ambient-sound.js";
 import { createNotificationController } from "../src/features/notification-controller.js";
 import { createAppearanceController } from "../src/features/appearance-controller.js";
 import { createRecoveryController } from "../src/features/recovery-controller.js";
-import { createBackupImportController } from "../src/features/backup-import-controller.js";
+import { createBackupImportController, MAX_BACKUP_BYTES } from "../src/features/backup-import-controller.js";
 import { mountHourglass } from "../src/features/hourglass.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -768,6 +768,29 @@ function createBackupImportHarness(options = {}) {
   });
   return { values, events, input, replacements, messages, refreshes, successes, rollbacks, settingsSnapshot, checked, controller };
 }
+
+test("backup import rejects oversized text before parsing or mutating data", async () => {
+  const h = createBackupImportHarness();
+  const result = await h.controller.importText(" ".repeat(MAX_BACKUP_BYTES + 1));
+  assert.deepEqual(result, { ok: false, stage: "size" });
+  assert.equal(h.events.length, 0);
+  assert.equal(h.replacements.length, 0);
+  assert.match(h.messages.at(-1), /上限10 MiB/);
+});
+
+test("backup import rejects oversized files before reading and resets the file input", async () => {
+  const h = createBackupImportHarness();
+  let reads = 0;
+  const target = {
+    value: "selected",
+    files: [{ size: MAX_BACKUP_BYTES + 1, async text() { reads++; return "{}"; } }]
+  };
+  const result = await h.controller.handleChange({ target });
+  assert.deepEqual(result, { ok: false, stage: "size" });
+  assert.equal(reads, 0);
+  assert.equal(target.value, "");
+  assert.equal(h.events.length, 0);
+});
 
 test("backup import controller validates, snapshots first, then applies settings and stats", async () => {
   const h = createBackupImportHarness();
