@@ -88,10 +88,11 @@ const studyRoomTimes=[
  {id:'morning',name:'朝',from:7,to:11,sunX:'28%',sunY:'16%',message:'新しい光が窓辺に届く。今日はまだ、始まったばかり。'},
  {id:'day',name:'昼',from:11,to:16,sunX:'68%',sunY:'10%',message:'明るい空の下、ただひと息つく時間。'},
  {id:'evening',name:'夕方',from:16,to:19,sunX:'76%',sunY:'54%',message:'空の色が変わっていくのを、ゆっくり眺めよう。'},
- {id:'night',name:'夜',from:19,to:24,sunconst hourglass = mountHourglass({ getRemainingSeconds });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){hourglass.tick();if(document.body.classList.contains('study-room-fullscreen'))loadStudyRoomWeather()}});
-ullscreen'))loadStudyRoomWeather()}});
-renderHourglass();
+ {id:'night',name:'夜',from:19,to:24,sunX:'70%',sunY:'18%',message:'遠くの明かりを眺めながら、静かな夜を過ごそう。'}
+];
+
+const hourglass = mountHourglass({ getRemainingSeconds });
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){hourglass.tick();updateStudyRoom();if(document.body.classList.contains('study-room-fullscreen'))loadStudyRoomWeather()}});
 function setStudyRoomMode(enabled){
  document.body.classList.toggle('study-room-fullscreen',enabled);
  if(enabled&&screen.orientation&&typeof screen.orientation.lock==='function'){screen.orientation.lock('landscape').catch(()=>{})}
