@@ -25,7 +25,8 @@
 - 保存層: `src/data/storage.js`（文字列・JSONの読み書き、利用不可・不正JSONへの防御処理）
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト40項目、HTML/DOM契約・移行・タイマー・記録・保存の検証）
+- 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト45項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -106,3 +107,13 @@
 - `.github/workflows/deploy-pages.yml` を追加。PRはテストとビルドのみ、`main` へのpushまたは `main` 上での手動実行だけがPagesへデプロイする。
 - GitHub PagesのSource設定はプロジェクト所有者がGitHub Actionsへ切り替えたと確認済み。設定自体は接続ツールから独立検証できていない。
 - PRはDraftのまま。PRビルドは成功しているが、公開デプロイとiPhone実機確認は未実施。
+
+
+## Preview data-protection hardening — 2026-11-21
+
+- Backup import now writes the pre-import snapshot before attempting to replace `focus-stats`.
+- The application updates in-memory study records only after the new stats payload has been saved successfully.
+- If pre-import snapshot creation fails, import stops without changing stats.
+- If the new stats write fails, the old stats remain intact and the pre-import snapshot remains available for recovery.
+- `src/data/transactions.js` contains the storage transaction helper; three tests cover success, backup-write failure, and stats-write failure.
+- These changes are limited to `Focus-preview`; production repository `Focus` was not modified.
