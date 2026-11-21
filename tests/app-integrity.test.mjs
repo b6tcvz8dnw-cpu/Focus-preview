@@ -14,6 +14,7 @@ import { calculateStats } from "../src/data/records.js";
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from "../src/data/schema.js";
 import { inspectRecoverySnapshots } from "../src/data/recovery.js";
 import { writeStatsWithBackup } from "../src/data/transactions.js";
+import { createTimerController } from "../src/features/timer-controller.js";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -152,14 +153,15 @@ test("HTML loads the external application module and its source parses", async (
   assert.ok(!script.includes("localStorage."), "app should use the storage adapter");
 });
 
-test("core timer and Study Room functions remain present", async () => {
+test("timer lifecycle is owned by its feature module and Study Room remains separated", async () => {
   const script = await read("../src/main.js");
-  for (const name of [
-    "startTimer", "persistTimer", "restoreTimerRuntime", "complete",
-    "tick", "updateStudySky"
-  ]) {
-    assert.ok(script.includes("function " + name + "("), "missing function " + name);
-  }
+  const controller = await read("../src/features/timer-controller.js");
+  assert.ok(script.includes("./features/timer-controller.js"));
+  assert.ok(script.includes("createTimerController("));
+  assert.ok(script.includes("timerController.restore()"));
+  assert.ok(controller.includes("export function createTimerController"));
+  assert.ok(!script.includes("function startTimer("));
+  assert.ok(!script.includes("function restoreTimerRuntime("));
   const hourglass = await read("../src/features/hourglass.js");
   const room = await read("../src/features/study-room.js");
   assert.ok(hourglass.includes("export function mountHourglass"));
@@ -169,12 +171,13 @@ test("core timer and Study Room functions remain present", async () => {
 test("existing local storage keys are preserved", async () => {
   const script = await read("../src/main.js");
   const transactions = await read("../src/data/transactions.js");
+  const timerController = await read("../src/features/timer-controller.js");
   for (const key of [
     "focus-stats", "focus-notifications", "focus-timer-runtime",
     "focus-timer-settings", "focus-room-quiet-text",
     "focus-appearance", "focus-mark", "focus-preimport-backup", "focus-corrupt-stats-backup", "focus-pre-migration-backup", "focus-pre-recovery-raw-stats"
   ]) {
-    assert.ok((script + transactions).includes(key), "missing storage key: " + key);
+    assert.ok((script + transactions + timerController).includes(key), "missing storage key: " + key);
   }
 });
 
@@ -491,14 +494,17 @@ test("storage adapter round-trips runtime state and protects failed writes", () 
   assert.equal(blocked.setJSON("focus-stats", { records: [] }), false);
 });
 
-test("startup restores expired timer only after completion recording is wired", async () => {
+test("startup restores timer only after statistics and completion callbacks are wired", async () => {
   const script = await read("../src/main.js");
-  const wrapper = script.indexOf("const originalComplete=complete;");
-  const restore = script.indexOf("restoreTimerRuntime();");
-  assert.ok(wrapper >= 0 && wrapper < restore, "completion wrapper must be registered before timer restoration");
+  const statsLoad = script.indexOf("const rawText=storage.getText('focus-stats'");
+  const restore = script.indexOf("timerController.restore()");
+  const controller = script.indexOf("timerController=createTimerController(");
+  assert.ok(controller >= 0 && statsLoad > controller && restore > statsLoad);
+  assert.ok(script.includes("onFocusComplete(){"), "focus completion callback must be registered before restore");
   assert.ok(script.includes("if(appReady){"), "startup completion must defer UI-only effects");
   assert.ok(script.includes("appReady=true;"), "UI becomes ready after initial rendering");
-  assert.ok(script.includes("Number.isFinite(Number(saved.deadline))"), "invalid persisted deadlines must not resume");
+  const timer = await read("../src/features/timer-controller.js");
+  assert.ok(timer.includes("Number.isFinite(Number(saved.deadline))"), "invalid persisted deadlines must not resume");
 });
 
 test("screen navigation and direct DOM references resolve to existing page elements", async () => {
@@ -517,10 +523,11 @@ test("screen navigation and direct DOM references resolve to existing page eleme
   }
 });
 
-test("timer completion wrapper is the only session-record creation path", async () => {
+test("focus completion callback is the only session-record creation path", async () => {
   const script = await read("../src/main.js");
-  const created = [...script.matchAll(/records\.push\(r\)/g)];
+  const created = [...script.matchAll(/records\.push\(record\)/g)];
   assert.equal(created.length, 1);
+  assert.ok(script.includes("onFocusComplete(){"));
   assert.ok(script.includes("minutes:durations.focus"));
   assert.ok(script.includes("save();if(appReady)"));
 });
@@ -816,4 +823,125 @@ test("CSS is split into ordered feature stylesheets without inline styles", asyn
   assert.ok(css.includes(":root{color-scheme:dark"));
   assert.ok(css.includes("@keyframes star-twinkle"));
   assert.ok(css.includes(":focus-visible"));
+});
+
+function createFakeTimerHarness(options = {}) {
+  let now = options.now ?? 1000;
+  let nextId = 1;
+  const jobs = new Map();
+  const values = new Map();
+  const store = {
+    getJSON: (key, fallback = null) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+    setJSON: (key, value) => { values.set(key, JSON.stringify(value)); return true; }
+  };
+  const controller = createTimerController({
+    durations: options.durations || { focus: 1, short: 1, long: 2 },
+    getCycleLength: options.getCycleLength || (() => 2),
+    getCompletedSessions: options.getCompletedSessions || (() => 1),
+    store,
+    now: () => now,
+    schedule: (callback, delay) => { const id = nextId++; jobs.set(id, { callback, delay }); return id; },
+    cancel: (id) => jobs.delete(id),
+    onFocusComplete: options.onFocusComplete || (() => {}),
+    onBreakComplete: options.onBreakComplete || (() => {}),
+    onChange: options.onChange || (() => {})
+  });
+  return {
+    controller, store, jobs,
+    setNow(value) { now = value; },
+    advance(milliseconds) { now += milliseconds; for (const job of [...jobs.values()]) job.callback(); },
+    now: () => now
+  };
+}
+
+test("timer controller starts, pauses, and persists a deadline-based runtime", () => {
+  const h = createFakeTimerHarness();
+  h.controller.start();
+  assert.deepEqual(h.controller.getState(), {
+    durations: { focus: 1, short: 1, long: 2 }, mode: "focus",
+    remaining: 60, total: 60, running: true, deadline: 61000, finished: false
+  });
+  h.advance(12500);
+  h.controller.pause();
+  assert.equal(h.controller.getState().remaining, 48);
+  assert.equal(h.controller.getState().running, false);
+  assert.equal(h.store.getJSON("focus-timer-runtime").remaining, 48);
+  assert.equal(h.jobs.size, 0);
+});
+
+test("focus completion records once and automatically starts the correct break", () => {
+  let completed = 1;
+  let focusCompletions = 0;
+  const h = createFakeTimerHarness({
+    getCompletedSessions: () => completed,
+    onFocusComplete: () => { completed++; focusCompletions++; }
+  });
+  h.controller.start();
+  h.advance(60000);
+  const state = h.controller.getState();
+  assert.equal(focusCompletions, 1);
+  assert.equal(state.mode, "long");
+  assert.equal(state.remaining, 120);
+  assert.equal(state.running, true);
+  assert.equal(state.finished, false);
+});
+
+test("break completion finishes without automatically starting another session", () => {
+  let breakCompletions = 0;
+  const h = createFakeTimerHarness({ onBreakComplete: () => breakCompletions++ });
+  h.controller.setMode("short");
+  h.controller.start();
+  h.advance(60000);
+  const state = h.controller.getState();
+  assert.equal(breakCompletions, 1);
+  assert.equal(state.mode, "short");
+  assert.equal(state.remaining, 0);
+  assert.equal(state.running, false);
+  assert.equal(state.finished, true);
+});
+
+test("timer controller restores active and expired runtimes safely", () => {
+  const h = createFakeTimerHarness();
+  h.store.setJSON("focus-timer-runtime", {
+    mode: "focus", remaining: 30, deadline: h.now() + 30000,
+    running: true, finished: false, updatedAt: h.now()
+  });
+  assert.equal(h.controller.restore(), true);
+  assert.equal(h.controller.getState().running, true);
+  h.advance(30000);
+  assert.equal(h.controller.getState().mode, "long");
+
+  let completions = 0;
+  const expired = createFakeTimerHarness({ onFocusComplete: () => completions++ });
+  expired.store.setJSON("focus-timer-runtime", {
+    mode: "focus", remaining: 0, deadline: expired.now() - 1000,
+    running: true, finished: false, updatedAt: expired.now() - 61000
+  });
+  expired.controller.restore();
+  assert.equal(completions, 1);
+  assert.equal(expired.controller.getState().running, true);
+  assert.equal(expired.controller.getState().mode, "short");
+});
+
+test("timer controller resets, changes mode, skips, and applies durations", () => {
+  const h = createFakeTimerHarness();
+  h.controller.setDurations({ focus: 2, short: 1, long: 3 });
+  assert.equal(h.controller.getState().remaining, 120);
+  h.controller.setMode("long");
+  assert.equal(h.controller.getState().remaining, 180);
+  h.controller.skip();
+  assert.equal(h.controller.getState().mode, "focus");
+  h.controller.start();
+  h.controller.reset();
+  assert.equal(h.controller.getState().running, false);
+  assert.equal(h.controller.getState().remaining, 120);
+});
+
+test("timer controller persists the current remaining time before page suspension", () => {
+  const h = createFakeTimerHarness();
+  h.controller.start();
+  h.advance(10000);
+  h.controller.persistCurrent();
+  assert.equal(h.store.getJSON("focus-timer-runtime").remaining, 50);
+  assert.equal(h.store.getJSON("focus-timer-runtime").running, true);
 });
