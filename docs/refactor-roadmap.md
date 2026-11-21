@@ -323,6 +323,6 @@ Audit workstreams:
 Initial findings:
 - The repository currently has no `package-lock.json`; CI uses `npm install`. Although Vite itself is pinned in `package.json`, transitive dependency resolution is not fully locked. This is a reproducibility gap to resolve before promotion.
 - A local attempt to generate the lockfile could not reach the package registry in this environment. Do not hand-author a lockfile; generate and verify it in a network-enabled, trusted build environment.
-- Import and rendering code has existing schema normalization and escaping protections. The audit will add explicit limits for unusually large user-selected backup files only if they can be chosen without breaking legitimate backups.
+- Import and rendering code has existing schema normalization and escaping protections. Backup import now rejects files and direct text payloads above 10 MiB before parsing or mutating settings/records; the limit is deliberately generous for a personal study-history export and can be revisited if real backups approach it.
 - Phase 8 is in progress; the Preview deployment remains separate from production.
 
