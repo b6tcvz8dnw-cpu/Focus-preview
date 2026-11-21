@@ -2,7 +2,9 @@
  * Small defensive adapter around browser storage.
  * A provider is injected so the behavior can be tested without a browser.
  */
-export function createStorage(resolveStorage = () => globalThis.localStorage) {
+export function createStorage(resolveStorage = () => globalThis.localStorage, { prefix = "" } = {}) {
+  const storageKey = (key) => `${prefix}${key}`;
+
   const getStorage = () => {
     try {
       return resolveStorage() || null;
@@ -14,7 +16,7 @@ export function createStorage(resolveStorage = () => globalThis.localStorage) {
   return {
     getText(key, fallback = null) {
       try {
-        const value = getStorage()?.getItem(key);
+        const value = getStorage()?.getItem(storageKey(key));
         return value === null || value === undefined ? fallback : value;
       } catch {
         return fallback;
@@ -25,7 +27,7 @@ export function createStorage(resolveStorage = () => globalThis.localStorage) {
       try {
         const target = getStorage();
         if (!target) return false;
-        target.setItem(key, String(value));
+        target.setItem(storageKey(key), String(value));
         return true;
       } catch {
         return false;
@@ -52,4 +54,5 @@ export function createStorage(resolveStorage = () => globalThis.localStorage) {
   };
 }
 
-export const storage = createStorage();
+// GitHub Pages project sites share one origin; keep preview data separate from production.
+export const storage = createStorage(undefined, { prefix: "focus-preview:" });
