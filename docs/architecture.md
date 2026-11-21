@@ -22,7 +22,7 @@
 - テスト: Node.js標準テストランナー
 - モジュール: `src/core/date-time.js`（`formatClock`, `dateKey`, `buildWeekData`, `getStudySkyLevel`）
 - タイマー計算: `src/core/timer.js`（絶対時刻からの残り時間、不正値の防御、休憩モードの選択）
-- タイマー状態管理: `src/features/timer-controller.js`（開始・一時停止・リセット・モード変更・自動休憩・期限切れ復元・実行状態保存。DOM非依存、UI/統計/通知はコールバック注入）
+- 外観設定: `src/features/appearance-controller.js`（テーマ5種・ブランドマーク3種の適用、ボタン状態、既存保存キーの読み書き）\n- タイマー状態管理: `src/features/timer-controller.js`（開始・一時停止・リセット・モード変更・自動休憩・期限切れ復元・実行状態保存。DOM非依存、UI/統計/通知はコールバック注入）
 - 保存層: `src/data/storage.js`（文字列・JSONの読み書き、利用不可・不正JSONへの防御処理）
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
@@ -49,7 +49,7 @@
 | 分析 | `renderAnalytics`, `updateChart` |
 | 書斎 | `updateStudyRoom`, `updateStudySky`, `loadStudyRoomWeather` |
 | 砂時計 | `startHourglass`, `tickHourglass`, `resetHourglass` |
-| 外観・設定 | `setTheme`, `setMark`, `setStudyRoomMode` |
+| 外観・設定 | テーマとマークは `src/features/appearance-controller.js`。書斎全画面切替は `src/main.js` |
 | 環境音 | `startAmbient`, `setAmbientLayer`, `stopAmbient` |
 | バックアップ | `exportData` / `importData` のイベント処理 |
 
@@ -245,3 +245,13 @@
 - Backup restoration updates the controller through `setEnabled`, keeping the existing backup field and storage key unchanged.
 - Permission denial and unsupported browsers leave notifications disabled and report a user-facing message. Notification delivery remains best-effort; browser and iOS PWA lifecycle restrictions still apply.
 - Tests use a fake Notification API to verify permission grant/denial, unsupported environments, delivery gating, persistence, and backup restoration.
+
+
+## Appearance controller extraction — 2026-11-22
+
+- Extracted the five existing color themes and three brand marks into `src/features/appearance-controller.js`.
+- The controller owns theme CSS-variable application, browser theme-color metadata, selected/pressed button states, preference restoration, and persistence.
+- Existing storage keys `focus-appearance` and `focus-mark`, palette values, visible labels, and backup format are preserved. Backup import now calls the controller rather than the former main-entry-point functions.
+- Unknown or corrupt appearance preferences safely fall back to the existing Forest / dot defaults.
+- Automated tests cover restore, switching, persistence, fallback behavior, accessible button state, and listener cleanup.
+- No intentional visual redesign or new appearance option was introduced.
