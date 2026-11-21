@@ -12,6 +12,7 @@ import { createStorage } from "../src/data/storage.js";
 import { getRemainingSeconds, getNextBreakMode } from "../src/core/timer.js";
 import { calculateStats } from "../src/data/records.js";
 import { createStudyStatsStore } from "../src/data/stats-store.js";
+import { createStudyViews } from "../src/views/study-views.js";
 import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURRENT_DATA_SCHEMA_VERSION, CURRENT_BACKUP_VERSION } from "../src/data/schema.js";
 import { inspectRecoverySnapshots } from "../src/data/recovery.js";
 import { writeStatsWithBackup } from "../src/data/transactions.js";
@@ -1079,4 +1080,71 @@ test("stats replacement is transactional and only publishes after successful per
   const rejected = failed.replaceStats({ records: [] }, { backupKey: "focus-preimport-backup", backupPayload: {} });
   assert.deepEqual(rejected, { ok: false, stage: "backup" });
   assert.equal(failed.getState().completed, prior.completed);
+});
+
+function createViewHarness() {
+  const elements = new Map();
+  const makeElement = () => ({
+    innerHTML: "", textContent: "", classList: { toggle() {}, add() {}, remove() {} }
+  });
+  const root = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, makeElement());
+      return elements.get(id);
+    },
+    querySelectorAll() { return []; }
+  };
+  return { root, elements, views: createStudyViews({ root }) };
+}
+
+test("study views render weekly totals and goal progress from supplied data only", () => {
+  const h = createViewHarness();
+  const now = new Date(2026, 10, 21, 12);
+  const history = { "2026-11-21": 75, "2026-11-20": 25 };
+  const week = h.views.renderWeekly({ history, now });
+  assert.equal(week.length, 7);
+  assert.equal(h.elements.get("todayMinutes").textContent, 75);
+  assert.equal(h.elements.get("weekTotal").textContent, "1時間40分");
+  h.views.renderGoals({ history, dailyGoal: 90, weeklyGoal: 180, now });
+  assert.match(h.elements.get("goalProgress").innerHTML, /75 \/ 90分/);
+  assert.match(h.elements.get("goalProgress").innerHTML, /100 \/ 180分/);
+});
+
+test("study views render calendar dates and escape reflection text in history", () => {
+  const h = createViewHarness();
+  const history = { "2026-11-21": 45 };
+  h.views.renderCalendar({ history, cursor: new Date(2026, 10, 1) });
+  assert.equal(h.elements.get("calendarTitle").textContent, "2026年 11月");
+  assert.match(h.elements.get("calendarGrid").innerHTML, /title="45分"/);
+  h.views.renderHistory({
+    records: [{ id: "safe-id", timestamp: 1795219200000, minutes: 25, note: "<script>alert(1)</script>" }]
+  });
+  const html = h.elements.get("historyList").innerHTML;
+  assert.match(html, /&lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /data-record-edit="safe-id"/);
+});
+
+test("study analytics views build 14-day, 12-week, and 12-month ranges", () => {
+  const h = createViewHarness();
+  const history = { "2026-11-21": 30, "2026-11-20": 20 };
+  const now = new Date(2026, 10, 21, 12);
+  const day = h.views.renderAnalytics({ history, range: "day", now });
+  const week = h.views.renderAnalytics({ history, range: "week", now });
+  const month = h.views.renderAnalytics({ history, range: "month", now });
+  assert.equal(day.length, 14);
+  assert.equal(week.length, 12);
+  assert.equal(month.length, 12);
+  assert.equal(day.reduce((sum, item) => sum + item.value, 0), 50);
+});
+
+test("main delegates study presentation to the dedicated views module", async () => {
+  const script = await read("../src/main.js");
+  assert.ok(script.includes("createStudyViews"));
+  assert.ok(script.includes("studyViews.renderWeekly"));
+  assert.ok(script.includes("studyViews.renderCalendar"));
+  assert.ok(script.includes("studyViews.renderHistory"));
+  assert.ok(script.includes("studyViews.renderAnalytics"));
+  assert.ok(!script.includes("function renderCalendar(){const y="));
+  assert.ok(!script.includes("function renderAnalytics(){const now="));
 });
