@@ -27,6 +27,7 @@ export function createTimerController({
   let deadline = 0;
   let interval = null;
   let finished = false;
+  let pageVisible = true;
 
   const snapshot = () => ({
     durations: { ...config }, mode, remaining, total, running, deadline, finished
@@ -44,6 +45,10 @@ export function createTimerController({
     } catch {}
   }
 
+  function scheduleTick() {
+    if (pageVisible && running && interval === null) interval = schedule(tick, 1000);
+  }
+
   function stop() {
     if (interval !== null) cancel(interval);
     interval = null;
@@ -57,7 +62,8 @@ export function createTimerController({
     running = true;
     deadline = now() + remaining * 1000;
     if (interval !== null) cancel(interval);
-    interval = schedule(tick, 1000);
+    interval = null;
+    scheduleTick();
     persist();
     emit();
   }
@@ -154,7 +160,7 @@ export function createTimerController({
       deadline = Number(saved.deadline);
       remaining = getRemainingSeconds(deadline, now());
       if (remaining > 0) {
-        interval = schedule(tick, 1000);
+        scheduleTick();
         emit();
       } else {
         running = false;
@@ -169,6 +175,17 @@ export function createTimerController({
       emit();
     }
     return true;
+  }
+
+  function setVisible(visible) {
+    pageVisible = !!visible;
+    if (!pageVisible) {
+      if (interval !== null) cancel(interval);
+      interval = null;
+      persistCurrent();
+      return;
+    }
+    scheduleTick();
   }
 
   function persistCurrent() {
@@ -193,6 +210,7 @@ export function createTimerController({
     skip,
     restore,
     persistCurrent,
+    setVisible,
     destroy
   };
 }
