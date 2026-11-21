@@ -26,7 +26,7 @@
 - 学習記録集計: `src/data/records.js`（累計・日別履歴の再計算、重複ID排除）
 - 復旧データ検査: `src/data/recovery.js`（端末内スナップショットの一覧化、形式検証、将来スキーマの復元拒否、現在の保護データの原文書き出し）
 - 保存トランザクション: `src/data/transactions.js`（復元前バックアップを確保してから統計データを置き換える。いずれかの書き込み失敗時は旧統計を維持）
-- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト49項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
+- 品質保証: `tests/app-integrity.test.mjs`（Node.js標準テスト52項目、HTML/DOM契約・移行・タイマー・記録・保存・復旧トランザクションの検証）
 - アプリ本体の保存API直接呼び出し: 0件
 
 ## 画面
@@ -144,3 +144,14 @@
 - Latest preview quality checks: 49 tests passed, 0 failed; Vite production build succeeded.
 - Preview Pages deployment succeeded for commit `c6358e67e5b9ebd71ccc063b034a77ed43127d21`.
 - Manual iPhone validation of this latest settings change remains outstanding.
+
+
+## Accessibility and performance audit — 2026-11-21
+
+- Added visible keyboard focus outlines and minimum 44px touch targets for controls; tab navigation has a 48px minimum height.
+- Timer display now exposes the timer role, the decorative SVG ring is hidden from assistive technology, and the current timer state is announced politely.
+- Mode selection synchronizes its pressed state for assistive technology.
+- Expanded reduced-motion support to disable CSS animations and transitions across the app when the OS preference requests reduced motion.
+- Focus timer and Study Room hourglass intervals now update once per second, matching the displayed MM:SS precision; both continue to derive remaining time from absolute deadlines.
+- Latest quality workflow: 52/52 tests passed; production build succeeded. Preview Pages deployment succeeded for commit `f518903118a35cc746d3a09552f2016accdf7d69`.
+- Manual iPhone validation of the new reduced-motion, keyboard focus, and touch-target changes remains outstanding.
