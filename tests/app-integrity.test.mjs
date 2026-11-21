@@ -61,8 +61,8 @@ test("document CSP limits scripts, network access, and embedded objects", async 
     "form-action 'self'"
   ]) assert.ok(policy.includes(directive), "missing CSP directive: " + directive);
   assert.doesNotMatch(policy, /script-src[^;]*unsafe-inline/);
-  assert.doesNotMatch(html, /<script(?![^>]*\\bsrc=)[^>]*>/i, "inline scripts are not allowed");
-  assert.doesNotMatch(html, /\\son[a-z]+\\s*=/i, "inline event handlers are not allowed");
+  assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/i, "inline scripts are not allowed");
+  assert.doesNotMatch(html, /\son[a-z]+\s*=/i, "inline event handlers are not allowed");
 });
 
 test("all HTML IDs are unique", async () => {
@@ -1227,7 +1227,7 @@ test("CSS is split into ordered feature stylesheets without inline styles", asyn
   const entry = await read("../src/styles/main.css");
   const expected = cssFiles.map(name => `@import "./${name}";`).join("\n");
   assert.ok(html.includes('<link rel="stylesheet" href="./src/styles/main.css">'));
-  assert.doesNotMatch(html, /<style(?:\\s|>)/i);
+  assert.doesNotMatch(html, /<style(?:\s|>)/i);
   assert.equal(entry.trim(), expected);
   const css = await readStyles();
   assert.ok(css.includes(":root{color-scheme:dark"));
