@@ -698,3 +698,32 @@ test("document head uses relative PWA asset paths for GitHub Pages subpaths", as
   assert.match(html, /<link rel="apple-touch-icon" href="\.\/icon-192\.png"/);
   assert.doesNotMatch(html, /(?:href|src)="\/(?:manifest\.webmanifest|icon\.svg|icon-192\.png)"/);
 });
+
+
+test("study room refresh preserves its structural class and visual state", async () => {
+  const html = await read("../index.html");
+  const main = await read("../src/main.js");
+  assert.match(html, /class="study-room-view little-planet-view season-/);
+  assert.match(main, /for\(const name of \[\.\.\.view\.classList\]\)/);
+  assert.match(main, /view\.classList\.add\('season-'\+season\.id,'time-'\+time\.id\)/);
+  assert.doesNotMatch(main, /view\.className\s*=/);
+});
+
+test("study room hourglass remains above decorative layers and accepts touch input", async () => {
+  const html = await read("../index.html");
+  const main = await read("../src/main.js");
+  assert.match(html, /\.planet-hourglass\{[^}]*z-index:30;pointer-events:auto;touch-action:manipulation/s);
+  assert.match(html, /\.desk-hourglass\{[^}]*pointer-events:auto;touch-action:manipulation/s);
+  assert.match(main, /hourglassButton\.addEventListener\('click'/);
+  assert.match(main, /hourglassButton\.addEventListener\('pointerdown'/);
+});
+
+test("study room contains active celestial motion and a reduced-motion fallback", async () => {
+  const html = await read("../index.html");
+  assert.ok(html.includes("@keyframes star-twinkle"));
+  assert.ok(html.includes("@keyframes nebula-breathe"));
+  assert.ok(html.includes("@keyframes shooting-one"));
+  assert.ok(html.includes("@keyframes room-butterfly-flight"));
+  assert.ok(html.includes("@media(prefers-reduced-motion:reduce)"));
+  assert.ok(html.includes("cosmic-motion .wind-ribbons"));
+});
