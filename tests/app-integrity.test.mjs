@@ -754,3 +754,28 @@ test("hourglass countdown is isolated from the main application entry point", as
   assert.ok(hourglass.includes("export function mountHourglass"));
   assert.ok(hourglass.includes("return { tick, reset, getState:"));
 });
+
+
+test("Study Room scene and weather logic are isolated in a feature module", async () => {
+  const main = await read("../src/main.js");
+  const room = await read("../src/features/study-room.js");
+  assert.ok(main.includes("import { mountStudyRoom } from './features/study-room.js'"));
+  assert.ok(main.includes("const studyRoom = mountStudyRoom({ updateSky: updateStudySky })"));
+  assert.ok(main.includes("studyRoom.onVisible()"));
+  assert.doesNotMatch(main, /function updateStudyRoom|function loadStudyRoomWeather|const studyRoomSeasons/);
+  assert.ok(room.includes("export function mountStudyRoom"));
+  assert.ok(room.includes("function applyWeather()"));
+  assert.ok(room.includes("async function loadWeather(force=false)"));
+  assert.ok(room.includes("function update()"));
+  assert.ok(room.includes("weather-clear"));
+});
+
+test("Study Room keeps weather refresh, date updates, and sky progress connected", async () => {
+  const main = await read("../src/main.js");
+  const room = await read("../src/features/study-room.js");
+  assert.ok(main.includes("studyRoom.update();studyRoom.loadWeather()"));
+  assert.ok(main.includes("hourglass.tick();studyRoom.onVisible()"));
+  assert.ok(room.includes("window.setInterval(update,60000)"));
+  assert.ok(room.includes("updateSky();"));
+  assert.ok(room.includes("studyRoomWeather').addEventListener('click'"));
+});
