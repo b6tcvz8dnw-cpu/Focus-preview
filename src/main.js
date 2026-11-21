@@ -6,12 +6,12 @@ import { normalizeStatsData, normalizeTimerSettings, validateBackupPayload, CURR
 import { inspectRecoverySnapshots } from './data/recovery.js';
 import { writeStatsWithBackup } from './data/transactions.js';
 import { mountHourglass } from './features/hourglass.js';
+import { createTimerController } from './features/timer-controller.js';
 import { mountStudyRoom } from './features/study-room.js';
 const $=id=>document.getElementById(id);
-let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,interval=null,completed=0,minutes=0,finished=false,history={},records=[],legacyCompleted=0,legacyMinutes=0,legacyHistory={},statsWriteBlocked=false,dailyGoal=60,weeklyGoal=300,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false;
+let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],legacyCompleted=0,legacyMinutes=0,legacyHistory={},statsWriteBlocked=false,dailyGoal=60,weeklyGoal=300,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,audioSource=null,audioGain=null,currentSound='off',appReady=false,timerController=null;
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
 function cycle(){return Math.max(2,Math.min(8,+$('cycleDuration').value||4))}
-function stop(){clearInterval(interval);interval=null;running=false;if(typeof persistTimer==='function')persistTimer()}
 function getWeekData(){return buildWeekData(history)}
 function updateStudySky(){
  const todayMinutes=Math.max(0,Number(history[dateKey(new Date())]||0));
@@ -55,30 +55,25 @@ function update(){
  document.title=fmt(remaining)+' | FOCUS';
  document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
 }
-function setMode(m){if(running&&!confirm('タイマーを停止してモードを切り替える？'))return;stop();mode=m;finished=false;remaining=durations[m]*60;total=remaining;persistTimer();update();}
 let notificationsEnabled=storage.getText('focus-notifications')==='true';
 function updateNotificationButton(){$('notificationToggle').textContent='完了通知：'+(notificationsEnabled?'オン':'オフ');$('notificationToggle').setAttribute('aria-pressed',String(notificationsEnabled))}
 $('notificationToggle').onclick=async()=>{if(!notificationsEnabled){if(!('Notification'in window)){$('toast').textContent='このブラウザは通知に対応していないようだよ。';return}const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;if(permission!=='granted'){$('toast').textContent='通知は許可されなかったため、オフのままだよ。';return}notificationsEnabled=true}else notificationsEnabled=false;storage.setText('focus-notifications',String(notificationsEnabled));updateNotificationButton();$('toast').textContent='通知設定を保存したよ。'};
 function notify(title){if(notificationsEnabled&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body:'FOCUS — 学習タイマー'})}catch(e){}}$('toast').textContent=title}
 updateNotificationButton();
-function persistTimer(){try{storage.setJSON('focus-timer-runtime',{mode,remaining,deadline,running,finished,updatedAt:Date.now()})}catch(e){}}
-function startTimer(){if(remaining<=0)remaining=durations[mode]*60;finished=false;running=true;deadline=Date.now()+remaining*1000;if(interval)clearInterval(interval);interval=setInterval(tick,1000);persistTimer();update()}
 function playCompletionSound(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=audioContext||new C();audioContext=c;c.resume().then(()=>{[660,880].forEach((hz,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.16;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.42);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45)})}).catch(()=>{})}catch(e){}}
-function complete(){const endedMode=mode;stop();remaining=0;if(endedMode==='focus'){completed++;minutes+=durations.focus;const key=dateKey(new Date());history[key]=(Number(history[key])||0)+durations.focus;save();mode=getNextBreakMode(completed,cycle());finished=false;remaining=durations[mode]*60;total=remaining;update();updateChart();notify('集中セッション完了！休憩を始めよう。');playCompletionSound();startTimer()}else{finished=true;update();notify('休憩終了！お疲れさま。');playCompletionSound();persistTimer()}}
-function tick(){if(!running)return;remaining=getRemainingSeconds(deadline);if(!remaining)complete();else{update()}}
-$('start').onclick=()=>{if(running){remaining=getRemainingSeconds(deadline);stop();update();return}if(finished){$('toast').textContent='次のモードを選んでスタートしよう。';return}startTimer()};
+$('start').onclick=()=>{if(running){timerController.pause();return}if(finished){$('toast').textContent='次のモードを選んでスタートしよう。';return}timerController.start()};
 function setLargeMode(enabled){document.body.classList.toggle('timer-large-mode',enabled);$('largeToggle').setAttribute('aria-pressed',String(enabled));$('largeToggle').textContent=enabled?'⤢ 通常表示':'⛶ 大画面';}
 $('largeToggle').onclick=()=>setLargeMode(!document.body.classList.contains('timer-large-mode'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('timer-large-mode'))setLargeMode(false)});
-$('reset').onclick=()=>{if(running&&!confirm('進行中のタイマーをリセットする？'))return;stop();finished=false;remaining=durations[mode]*60;total=remaining;persistTimer();$('toast').textContent='タイマーをリセットしたよ。';update()};
-$('skip').onclick=()=>{if(mode==='focus')setMode((completed+1)%cycle()===0?'long':'short');else setMode('focus');$('toast').textContent='次の時間に切り替えたよ。'};
-document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
-$('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマーの設定を変更すると、現在のセッションは最初からになるよ。変更してもいい？'))return;let vals={focus:+$('focusDuration').value,short:+$('shortDuration').value,long:+$('longDuration').value,cycle:+$('cycleDuration').value};if(vals.focus<1||vals.focus>120||vals.short<1||vals.short>60||vals.long<1||vals.long>90||vals.cycle<2||vals.cycle>8||Object.values(vals).some(v=>!Number.isInteger(v))){$('toast').textContent='設定値を範囲内の整数で入力してね。';return}durations={focus:vals.focus,short:vals.short,long:vals.long};stop();finished=false;remaining=durations[mode]*60;total=remaining;storage.setJSON('focus-timer-settings',vals);$('toast').textContent='タイマー設定を保存したよ。';update()};
+$('reset').onclick=()=>{if(running&&!confirm('進行中のタイマーをリセットする？'))return;timerController.reset();$('toast').textContent='タイマーをリセットしたよ。'};
+$('skip').onclick=()=>{if(running&&!confirm('タイマーを停止して次の時間に切り替える？'))return;timerController.skip();$('toast').textContent='次の時間に切り替えたよ。'};
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{if(running&&!confirm('タイマーを停止してモードを切り替える？'))return;timerController.setMode(b.dataset.mode)});
+$('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマーの設定を変更すると、現在のセッションは最初からになるよ。変更してもいい？'))return;let vals={focus:+$('focusDuration').value,short:+$('shortDuration').value,long:+$('longDuration').value,cycle:+$('cycleDuration').value};if(vals.focus<1||vals.focus>120||vals.short<1||vals.short>60||vals.long<1||vals.long>90||vals.cycle<2||vals.cycle>8||Object.values(vals).some(v=>!Number.isInteger(v))){$('toast').textContent='設定値を範囲内の整数で入力してね。';return}timerController.setDurations({focus:vals.focus,short:vals.short,long:vals.long});storage.setJSON('focus-timer-settings',vals);$('toast').textContent='タイマー設定を保存したよ。'};
 
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('[data-page]').forEach(t=>t.classList.toggle('active',t===b));if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){studyRoom.update();studyRoom.loadWeather()}});
 const hourglass = mountHourglass({ getRemainingSeconds });
 const studyRoom = mountStudyRoom({ updateSky: updateStudySky });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(running)tick();hourglass.tick();studyRoom.onVisible()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(running)timerController.tick();hourglass.tick();studyRoom.onVisible()}});
 function setStudyRoomMode(enabled){
  document.body.classList.toggle('study-room-fullscreen',enabled);
  if(enabled&&screen.orientation&&typeof screen.orientation.lock==='function'){screen.orientation.lock('landscape').catch(()=>{})}
@@ -87,7 +82,7 @@ function setStudyRoomMode(enabled){
 $('roomExit').addEventListener('click',()=>setStudyRoomMode(false));
 const savedQuietText=storage.getText('focus-room-quiet-text')==='true';$('studyRoomView').classList.toggle('room-quiet-text',savedQuietText);$('roomTextToggle').setAttribute('aria-pressed',String(savedQuietText));$('roomTextToggle').addEventListener('click',()=>{const view=$('studyRoomView'),hidden=view.classList.toggle('room-quiet-text'),button=$('roomTextToggle');storage.setText('focus-room-quiet-text',String(hidden));button.setAttribute('aria-pressed',String(hidden));button.setAttribute('aria-label',hidden?'文字情報を表示する':'文字情報を隠す');button.title=hidden?'文字情報を表示する':'文字情報を隠す'});
 
-window.addEventListener('pagehide',()=>{if(running)remaining=getRemainingSeconds(deadline);persistTimer()});
+window.addEventListener('pagehide',()=>timerController.persistCurrent());
 const themes={
  green:{bg:'#101915',panel:'#19251f',deep:'#111b16',line:'#304138',text:'#edf4ef',muted:'#9eafa4',accent:'#8ec5a3',accent2:'#294b38',tab:'rgba(16,25,21,.96)'},
  blue:{bg:'#101923',panel:'#192838',deep:'#111d29',line:'#30475a',text:'#edf4fb',muted:'#9eafc1',accent:'#8ab9e8',accent2:'#244765',tab:'rgba(16,25,35,.96)'},
@@ -106,25 +101,15 @@ function setMark(name,save=true){const marks={dot:'●',star:'✦',leaf:'❧'};$
 document.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>setTheme(b.dataset.theme));
 document.querySelectorAll('[data-mark]').forEach(b=>b.onclick=()=>setMark(b.dataset.mark));
 try{const ts=normalizeTimerSettings(storage.getJSON('focus-timer-settings',null));if(ts){durations={focus:ts.focus,short:ts.short,long:ts.long};$('focusDuration').value=ts.focus;$('shortDuration').value=ts.short;$('longDuration').value=ts.long;$('cycleDuration').value=ts.cycle;storage.setJSON('focus-timer-settings',ts)}}catch(e){}
+function syncTimerState(state){durations=state.durations;mode=state.mode;remaining=state.remaining;total=state.total;running=state.running;deadline=state.deadline;finished=state.finished;update()}
+timerController=createTimerController({durations,getCycleLength:cycle,getCompletedSessions:()=>completed,store:storage,onChange:syncTimerState,onFocusComplete(){completed++;minutes+=durations.focus;const key=dateKey(new Date());history[key]=(Number(history[key])||0)+durations.focus;save();updateChart();notify('集中セッション完了！休憩を始めよう。');playCompletionSound();const record={id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:durations.focus,note:''};records.push(record);save();if(appReady){$('reflection').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}},onBreakComplete(){notify('休憩終了！お疲れさま。');playCompletionSound()}});
+({durations,mode,remaining,total,running,deadline,finished}=timerController.getState());
 try{const ap=storage.getJSON('focus-appearance',null);if(ap&&ap.theme)setTheme(ap.theme,false);setMark(storage.getText('focus-mark')||'dot',false)}catch(e){}
 
-$('clear').onclick=()=>{stop();completed=0;minutes=0;history[dateKey(new Date())]=0;finished=false;remaining=durations[mode]*60;total=remaining;save();$('toast').textContent='今日の記録をリセットしたよ。';update();updateChart()};
+$('clear').onclick=()=>{timerController.reset();completed=0;minutes=0;history[dateKey(new Date())]=0;save();$('toast').textContent='今日の記録をリセットしたよ。';update();updateChart()};
 try{const rawText=storage.getText('focus-stats',null);let rawStats={},persistNormalized=true;if(rawText!==null){try{rawStats=JSON.parse(rawText);if(!rawStats||typeof rawStats!=='object'||Array.isArray(rawStats))throw new Error('invalid stats')}catch(e){const exists=storage.getText('focus-corrupt-stats-backup',null)!==null;persistNormalized=exists||storage.setText('focus-corrupt-stats-backup',rawText);rawStats={};$('toast').textContent=persistNormalized?'保存データの形式が壊れていたため、元データを端末内に退避して初期化したよ。':'保存データが壊れていたよ。元データを保護できなかったため、上書き保存を停止しているよ。'};}if(rawStats.schemaVersion> CURRENT_DATA_SCHEMA_VERSION){persistNormalized=false;$('toast').textContent='この保存データは新しいFOCUSで作られているため、上書きせずに保護しているよ。'}else if(rawText!==null&&rawStats.schemaVersion!==CURRENT_DATA_SCHEMA_VERSION&&persistNormalized){const exists=storage.getText('focus-pre-migration-backup',null)!==null;persistNormalized=exists||storage.setText('focus-pre-migration-backup',rawText);if(!persistNormalized)$('toast').textContent='旧データの退避に失敗したため、上書き保存を停止しているよ。'}if(!persistNormalized)statsWriteBlocked=true;const s=normalizeStatsData(rawStats);records=s.records;legacyCompleted=s.legacyCompleted;legacyMinutes=s.legacyMinutes;legacyHistory=s.legacyHistory;dailyGoal=s.dailyGoal;weeklyGoal=s.weeklyGoal;recalculateStats();if(persistNormalized)save()}catch(e){}
-const originalComplete=complete;
-complete=function(){const old=completed;originalComplete();if(completed>old){const r={id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:durations.focus,note:''};records.push(r);save();if(appReady){$('reflection').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}}};
-restoreTimerRuntime();
+timerController.restore();
 
-function restoreTimerRuntime(){
- try{
-  const saved=storage.getJSON('focus-timer-runtime',null);
-  if(!saved||!['focus','short','long'].includes(saved.mode))return;
-  mode=saved.mode;finished=!!saved.finished;total=durations[mode]*60;
-  if(saved.running&&Number.isFinite(Number(saved.deadline))&&Number(saved.deadline)>0){
-   running=true;deadline=Number(saved.deadline);remaining=getRemainingSeconds(deadline);
-   if(remaining>0)interval=setInterval(tick,1000);else{running=false;complete()}
-  }else{running=false;remaining=Math.max(0,Math.min(total,Number(saved.remaining)||total))}
- }catch(e){}
-}
 $('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;
 $('saveGoals').onclick=()=>{const d=Number($('dailyGoal').value),w=Number($('weeklyGoal').value);if(!Number.isInteger(d)||!Number.isInteger(w)||d<0||w<0||d>1440||w>10080){$('toast').textContent='目標は範囲内の整数で入力してね。';return}dailyGoal=d;weeklyGoal=w;save();renderGoals();$('toast').textContent='目標を保存したよ。'};
 function renderGoals(){const today=Number(history[dateKey(new Date())]||0),week=getWeekData().reduce((a,d)=>a+d.minutes,0);const item=(label,value,goal)=>{const p=goal?Math.min(100,value/goal*100):0;return '<div class="goal-line"><div class="goal-head"><span>'+label+'</span><b>'+value+' / '+(goal||'未設定')+'分</b></div><div class="goal-track"><div class="goal-fill" style="width:'+p+'%"></div></div></div>'};$('goalProgress').innerHTML=item('今日',today,dailyGoal)+item('今週',week,weeklyGoal)}
@@ -143,7 +128,7 @@ function renderAllRecords(){update();updateChart();renderGoals();renderCalendar(
 function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}r.note=$('reflection').value.trim();save();renderHistory();$('toast').textContent='振り返りを保存したよ。'}
 $('saveReflection').onclick=saveReflection;
 
-$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;stop();const today=dateKey(new Date()),removed=records.filter(r=>(r.date||dateKey(new Date(r.timestamp)))===today);records=records.filter(r=>(r.date||dateKey(new Date(r.timestamp)))!==today);legacyMinutes+=removed.reduce((a,r)=>a+(Number(r.minutes)||0),0);legacyCompleted+=removed.length;legacyHistory[today]=0;history[today]=0;finished=false;remaining=durations[mode]*60;total=remaining;recalculateStats();save();$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
+$('clear').onclick=()=>{if(!confirm('今日の詳細な学習記録を消去する？累計の集中時間と達成状況は残るよ。'))return;timerController.reset();const today=dateKey(new Date()),removed=records.filter(r=>(r.date||dateKey(new Date(r.timestamp)))===today);records=records.filter(r=>(r.date||dateKey(new Date(r.timestamp)))!==today);legacyMinutes+=removed.reduce((a,r)=>a+(Number(r.minutes)||0),0);legacyCompleted+=removed.length;legacyHistory[today]=0;history[today]=0;finished=false;remaining=durations[mode]*60;total=remaining;recalculateStats();save();$('toast').textContent='今日の詳細な記録を消去したよ。累計時間は保持されているよ。';renderAllRecords();};
 
 
 const ambientLayers={};
