@@ -1230,7 +1230,8 @@ test("ambient sound presets replace layers and volume changes reach every active
   h.controller.setPreset('off');
   assert.deepEqual(h.controller.getActiveLayers(), []);
   assert.ok(h.sources.every(source => source.stoppedAt === 10.5));
-  assert.equal(h.presetButtons.every(button => !button.classList.selected), true);
+  assert.equal(h.presetButtons.find(button => button.dataset.soundPreset === 'off').classList.selected, true);
+  assert.equal(h.presetButtons.filter(button => button.dataset.soundPreset !== 'off').every(button => !button.classList.selected), true);
 });
 
 test("ambient sound controller reports unsupported audio and stops all layers on destroy", () => {
