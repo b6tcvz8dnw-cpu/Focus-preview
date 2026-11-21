@@ -64,7 +64,7 @@
 - [ ] 既存URLを維持した段階的切替（Actions設定後にPRをマージし、Pagesデプロイ成功とiPhone実機を確認）
 - [x] Pages移行手順・切替順序・ロールバック上の注意を `docs/pages-migration.md` に記録
 
-### Phase 5 — iOSアプリ化
+### Phase 6 — iOSアプリ化（将来段階）
 - [ ] Capacitor導入
 - [ ] iOSネイティブ通知などの要件整理
 - [ ] Mac/Xcodeで実機ビルド・検証
