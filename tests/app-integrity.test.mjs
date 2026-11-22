@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v21"));
+  assert.ok(sw.includes("focus-preview-pwa-v22"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v21';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v22';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -2044,12 +2044,12 @@ test("appearance controller preserves the selected appearance when preference pe
   assert.match(messages.at(-1), /テーマを保存できなかった/);
 
   assert.equal(controller.setMark("leaf"), false);
-  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot", homeIcon: "planet" });
   assert.equal(fixture.brand.textContent, "●");
+  assert.match(messages.at(-1), /マークを保存できなかった/);
   assert.equal(controller.setHomeIcon("hourglass"), false);
   assert.equal(controller.getState().homeIcon, "planet");
   assert.match(messages.at(-1), /ホーム画面アイコンの設定を保存できなかった/);
-  assert.match(messages.at(-1), /マークを保存できなかった/);
 });
 
 test("appearance controller falls back safely for unknown or corrupt stored preferences", () => {
@@ -2070,7 +2070,7 @@ test("appearance controller normalizes invalid runtime choices before saving", (
   controller.initialize();
   controller.setTheme("not-a-theme");
   controller.setMark("not-a-mark");
-  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot", homeIcon: "planet" });
   assert.deepEqual(JSON.parse(fixture.values.get("focus-appearance")), { theme: "green", mark: "dot" });
   assert.equal(fixture.values.get("focus-mark"), "dot");
 });
