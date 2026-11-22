@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v20"));
+  assert.ok(sw.includes("focus-preview-pwa-v21"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v20");
+  assert.equal(cacheName, "focus-preview-pwa-v21");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v20';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v21';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -2218,4 +2218,43 @@ test("compact timer remains available on other pages while a session is running 
   assert.ok(script.includes("currentPage!=='timerPage'&&(running||remaining!==total)"));
   assert.ok(script.includes("updateMiniTimer()"));
   assert.ok(script.includes("timerController.pause()"));
+});
+
+
+test("stats store rotates two local automatic backup generations after successful commits", () => {
+  const h = createStatsHarness();
+  h.store.load();
+  h.store.createAutoBackup({ onlyIfMissing: true });
+  const initial = h.storage.getJSON("focus-auto-backup");
+  assert.ok(initial && initial.stats);
+  h.store.addSession({ id: "auto-1", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" });
+  const latest = h.storage.getJSON("focus-auto-backup");
+  const previous = h.storage.getJSON("focus-auto-backup-previous");
+  assert.equal(latest.stats.records.length, 1);
+  assert.equal(previous.stats.records.length, 0);
+  assert.ok(latest.savedAt >= initial.savedAt);
+});
+
+test("Study Room clock format and date visibility are stored as local preferences", async () => {
+  const room = await read("../src/features/study-room.js");
+  const main = await read("../src/main.js");
+  const html = await read("../index.html");
+  assert.ok(room.includes("setClockFormat(value)"));
+  assert.ok(room.includes("setShowDate(value)"));
+  assert.ok(room.includes("hour12:clockFormat==='12'"));
+  assert.ok(main.includes("studyRoom.setClockFormat"));
+  assert.ok(main.includes("studyRoom.setShowDate"));
+  assert.ok(html.includes('id="roomClockFormat"'));
+  assert.ok(html.includes('id="roomShowDate"'));
+});
+
+test("automatic backup recovery controls are present and protect current data before restore", async () => {
+  const html = await read("../index.html");
+  const main = await read("../src/main.js");
+  const store = await read("../src/data/stats-store.js");
+  assert.ok(html.includes('id="autoBackupStatus"'));
+  assert.ok(html.includes('id="restoreLatestAutoBackup"'));
+  assert.ok(html.includes('id="restorePreviousAutoBackup"'));
+  assert.ok(main.includes("focus-pre-auto-restore"));
+  assert.ok(store.includes("focus-auto-backup-previous"));
 });
