@@ -183,12 +183,8 @@
    <button class="theme-choice" data-theme="rose" aria-pressed="false"><i style="background:#e6a0ad"></i>ローズ</button>
   </div>
   <div class="muted" style="margin:16px 0 10px">ホーム画面のアイコン</div>
-  <div class="mark-grid" role="group" aria-label="ホーム画面のアイコン">
-   <button class="mark-choice selected" data-home-icon="planet" aria-pressed="true">◉ 小さな惑星</button>
-   <button class="mark-choice" data-home-icon="hourglass" aria-pressed="false">⌛ 砂時計</button>
-   <button class="mark-choice" data-home-icon="window" aria-pressed="false">▣ 書斎の窓</button>
-   <button class="mark-choice" data-home-icon="comet" aria-pressed="false">✦ 流れ星</button>
-  </div>
+  <p class="muted" style="margin:0 0 8px">4種類のデザインを専用画面で大きく確認して選べるよ。</p>
+  <button class="secondary wide" type="button" data-page="homeIconPage">アイコンを選ぶ・プレビューする →</button>
   <div class="muted" style="margin:16px 0 10px">アプリ内マーク</div>
   <div class="mark-grid" role="group" aria-label="アプリ内マーク">
    <button class="mark-choice selected" data-mark="dot" aria-pressed="true">● ドット</button>
@@ -206,6 +202,37 @@
 </details>
 </div>
 </section>
+<div class="page" id="homeIconPage" hidden>
+ <section class="panel">
+  <button class="secondary" type="button" data-page="settingsPage">← 設定へ戻る</button>
+  <h2 style="margin:18px 0 6px">ホーム画面アイコン</h2>
+  <p class="muted" style="margin:0">書斎の入口になるアイコンを選ぼう。選択はこの端末に保存されるよ。</p>
+  <div class="home-icon-preview-stage" aria-live="polite">
+   <img id="homeIconPreview" src="./icons/icon-planet.png" alt="小さな惑星のホーム画面アイコン">
+   <strong id="homeIconPreviewName">小さな惑星</strong>
+   <span>FOCUS</span>
+  </div>
+  <div class="muted" style="margin:10px 0 9px">デザインを選択</div>
+  <div class="home-icon-choice-grid" role="group" aria-label="ホーム画面アイコンのデザイン">
+   <button class="home-icon-choice selected" type="button" data-home-icon="planet" aria-pressed="true"><img src="./icons/icon-planet.png" alt=""><span>小さな惑星</span><small>静かな宇宙の小さな世界</small></button>
+   <button class="home-icon-choice" type="button" data-home-icon="hourglass" aria-pressed="false"><img src="./icons/icon-hourglass.png" alt=""><span>砂時計</span><small>時間の流れを見つめる</small></button>
+   <button class="home-icon-choice" type="button" data-home-icon="window" aria-pressed="false"><img src="./icons/icon-window.png" alt=""><span>書斎の窓</span><small>自分だけの静かな場所</small></button>
+   <button class="home-icon-choice" type="button" data-home-icon="comet" aria-pressed="false"><img src="./icons/icon-comet.png" alt=""><span>流れ星</span><small>夜空を横切るひとすじの光</small></button>
+  </div>
+ </section>
+ <section class="panel">
+  <h2>ホーム画面に反映するには</h2>
+  <p class="muted">iPhoneでは、すでにホーム画面へ追加したWebアプリのアイコンを、アプリ内の操作だけで直接差し替えることはできないよ。選択したデザインで追加し直そう。</p>
+  <ol class="home-icon-steps">
+   <li><strong>この画面でデザインを選ぶ</strong><span>上のプレビューが切り替わり、選択は自動で保存されるよ。</span></li>
+   <li><strong>古いFOCUSをホーム画面から削除する</strong><span>「ホーム画面から削除」を選ぶだけで大丈夫。SafariのWebサイトデータは消さないでね。</span></li>
+   <li><strong>SafariでFOCUSを開き直す</strong><span>ページを再読み込みしてから、共有ボタンをタップするよ。</span></li>
+   <li><strong>「ホーム画面に追加」を選ぶ</strong><span>追加前の画面でアイコンを確認してから追加してね。</span></li>
+  </ol>
+  <p class="muted home-icon-note">アイコンが古いままの場合は、Safariでページを再読み込みしてから、もう一度追加を試してね。iOS側のキャッシュにより反映に時間がかかることがあるよ。</p>
+  <button class="secondary wide" type="button" data-page="settingsPage">設定へ戻る</button>
+ </section>
+</div>
 <nav class="tabbar" aria-label="ページ切り替え">
  <button class="tab active" type="button" data-page="timerPage" aria-current="page"><span>◷</span>タイマー</button>
  <button class="tab" type="button" data-page="overviewPage"><span>▥</span>概要</button>
