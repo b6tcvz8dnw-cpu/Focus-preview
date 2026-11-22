@@ -2170,7 +2170,7 @@ test("ambient sound mixer exposes independent persistent controls for every laye
   const controller = await read("../src/features/ambient-sound.js");
   for (const kind of ["rain", "wind", "noise"]) {
     assert.ok(html.includes('id="soundVolume-' + kind + '"'));
-    assert.ok(script.includes("$('soundVolume-' + kind)"));
+    assert.ok(script.includes("$('soundVolume-'+kind)"));
   }
   assert.ok(controller.includes("function setLayerVolume(kind, volume)"));
   assert.ok(controller.includes("getLayerVolume"));
