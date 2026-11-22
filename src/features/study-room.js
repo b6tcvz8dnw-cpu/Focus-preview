@@ -1,5 +1,5 @@
 // Study Room scene state, weather integration, and time/season presentation.
-export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
+export function mountStudyRoom({ root = document, updateSky = () => {}, storage = null } = {}) {
   const $ = id => root.getElementById(id);
   const seasons = [
     {id:'spring',name:'春',months:[2,3,4],message:'花の気配が、窓の向こうに少しずつ増えていく。'},
@@ -56,6 +56,22 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
     }catch(error){if(!destroyed){showWeather('名古屋の天気を取得できません · タップで再試行');roomWeatherAttempted=false;}}
     finally{if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherTimeout=null;weatherRequest=null;roomWeatherLoading=false;}
   }
+  function onEnter(){
+    const now = new Date();
+    const previous = storage?.getJSON("focus-room-last-visit", null);
+    let message = "ここは、いつでも戻ってこられる場所。";
+    const previousTime = Number(previous?.timestamp);
+    if (Number.isFinite(previousTime) && previousTime > 0) {
+      const oldDate = new Date(previousTime);
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const oldDay = new Date(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate()).getTime();
+      const days = Math.max(0, Math.floor((today - oldDay) / 86400000));
+      message = days === 0 ? "今日も、ここへ。" : days === 1 ? "昨日の続きのように、またここへ。" : days + "日前に訪れた、小さな書斎。";
+    }
+    $("studyRoomReturn").textContent = message;
+    storage?.setJSON("focus-room-last-visit", { timestamp: now.getTime() });
+    update();
+  }
   function update(){
     const now=new Date(),month=now.getMonth(),hour=now.getHours();
     const season=seasons.find(s=>s.months.includes(month))||seasons[0];
@@ -75,5 +91,5 @@ export function mountStudyRoom({ root = document, updateSky = () => {} } = {}) {
   $('studyRoomWeather').addEventListener('click',handleWeatherClick);
   update();
   const interval=window.setInterval(()=>{if(!root.hidden&&!$('studyRoomPage')?.hidden)update()},60000);
-  return {update,updateSky,loadWeather,onVisible(){if(destroyed)return;update();if(root.body?.classList.contains('study-room-fullscreen'))loadWeather();},destroy(){destroyed=true;window.clearInterval(interval);if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherRequest?.abort();$('studyRoomWeather').removeEventListener('click',handleWeatherClick);}};
+  return {update,onEnter,updateSky,loadWeather,onVisible(){if(destroyed)return;update();if(root.body?.classList.contains('study-room-fullscreen'))loadWeather();},destroy(){destroyed=true;window.clearInterval(interval);if(weatherTimeout!==null)window.clearTimeout(weatherTimeout);weatherRequest?.abort();$('studyRoomWeather').removeEventListener('click',handleWeatherClick);}};
 }

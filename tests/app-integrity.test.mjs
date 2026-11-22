@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v16"));
+  assert.ok(sw.includes("focus-preview-pwa-v17"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v16");
+  assert.equal(cacheName, "focus-preview-pwa-v17");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v16';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v17';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -1261,7 +1261,7 @@ test("Study Room scene and weather logic are isolated in a feature module", asyn
   const main = await read("../src/main.js");
   const room = await read("../src/features/study-room.js");
   assert.ok(main.includes("import { mountStudyRoom } from './features/study-room.js'"));
-  assert.ok(main.includes("const studyRoom = mountStudyRoom({ updateSky: updateStudySky })"));
+  assert.ok(main.includes("const studyRoom = mountStudyRoom({ updateSky: updateStudySky, storage })"));
   assert.ok(main.includes("studyRoom.onVisible()"));
   assert.doesNotMatch(main, /function updateStudyRoom|function loadStudyRoomWeather|const studyRoomSeasons/);
   assert.ok(room.includes("export function mountStudyRoom"));
@@ -1278,7 +1278,7 @@ test("Study Room scene and weather logic are isolated in a feature module", asyn
 test("Study Room keeps weather refresh, date updates, and sky progress connected", async () => {
   const main = await read("../src/main.js");
   const room = await read("../src/features/study-room.js");
-  assert.ok(main.includes("studyRoom.update();studyRoom.loadWeather()"));
+  assert.ok(main.includes("studyRoom.onEnter();studyRoom.loadWeather()"));
   assert.ok(main.includes("hourglass.tick();timerController.setVisible(true);hourglass.setVisible(true);studyRoom.onVisible()"));
   assert.ok(room.includes("window.setInterval(()=>{if(!root.hidden&&!$('studyRoomPage')?.hidden)update()},60000)"));
   assert.ok(room.includes("updateSky();"));
@@ -2142,4 +2142,17 @@ test("landscape large timer scales clock text to the circular timer container", 
   assert.match(styles, /white-space:nowrap/);
   assert.match(styles, /max-width:100%/);
   assert.match(styles, /line-height:1/);
+});
+
+
+test("Study Room remembers a gentle local-only return message without affecting timer state", async () => {
+  const room = await read("../src/features/study-room.js");
+  const script = await read("../src/main.js");
+  const html = await read("../index.html");
+  assert.ok(room.includes('storage?.getJSON("focus-room-last-visit", null)'));
+  assert.ok(room.includes('storage?.setJSON("focus-room-last-visit"'));
+  assert.ok(room.includes("function onEnter()"));
+  assert.ok(script.includes("studyRoom.onEnter()"));
+  assert.ok(html.includes('id="studyRoomReturn"'));
+  assert.ok(!room.includes("focus-timer-runtime"));
 });
