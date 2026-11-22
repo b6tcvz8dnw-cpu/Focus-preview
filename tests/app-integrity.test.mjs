@@ -2002,7 +2002,7 @@ test("appearance controller restores theme, in-app mark, and home icon without r
     "focus-mark": "star"
   });
   const controller = createAppearanceController(fixture);
-  assert.deepEqual(controller.initialize(), { theme: "blue", mark: "star", homeIcon: "planet" });
+  assert.deepEqual(controller.initialize(), { theme: "blue", mark: "star" });
   assert.equal(fixture.css.get("--bg"), "#101923");
   assert.equal(fixture.meta.attributes.content, "#101923");
   assert.equal(fixture.brand.textContent, "✦");
@@ -2018,18 +2018,13 @@ test("appearance controller applies and persists theme and mark choices", () => 
   const controller = createAppearanceController(fixture);
   controller.initialize();
   fixture.themes.find(button => button.dataset.theme === "rose").click();
-  assert.deepEqual(controller.getState(), { theme: "rose", mark: "dot", homeIcon: "planet" });
+  assert.deepEqual(controller.getState(), { theme: "rose", mark: "dot" });
   assert.deepEqual(JSON.parse(fixture.values.get("focus-appearance")), { theme: "rose", mark: "dot" });
   assert.equal(fixture.css.get("--accent"), "#e6a0ad");
   fixture.marks.find(button => button.dataset.mark === "leaf").click();
   assert.equal(fixture.brand.textContent, "❧");
   assert.equal(fixture.values.get("focus-mark"), "leaf");
   assert.equal(fixture.marks.find(button => button.dataset.mark === "leaf").attributes["aria-pressed"], "true");
-  fixture.homeIcons.find(button => button.dataset.homeIcon === "comet").click();
-  assert.equal(controller.getState().homeIcon, "comet");
-  assert.equal(fixture.values.get("focus-home-icon"), "comet");
-  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-comet.png");
-  assert.equal(fixture.homeIcons.find(button => button.dataset.homeIcon === "comet").attributes["aria-pressed"], "true");
 });
 
 test("appearance controller preserves the selected appearance when preference persistence fails", () => {
@@ -2039,17 +2034,14 @@ test("appearance controller preserves the selected appearance when preference pe
   controller.initialize();
 
   assert.equal(controller.setTheme("rose"), false);
-  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot", homeIcon: "planet" });
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
   assert.equal(fixture.css.get("--bg"), "#101915");
   assert.match(messages.at(-1), /テーマを保存できなかった/);
 
   assert.equal(controller.setMark("leaf"), false);
-  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot", homeIcon: "planet" });
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
   assert.equal(fixture.brand.textContent, "●");
   assert.match(messages.at(-1), /マークを保存できなかった/);
-  assert.equal(controller.setHomeIcon("hourglass"), false);
-  assert.equal(controller.getState().homeIcon, "planet");
-  assert.match(messages.at(-1), /ホーム画面アイコンの設定を保存できなかった/);
 });
 
 test("appearance controller falls back safely for unknown or corrupt stored preferences", () => {
@@ -2058,7 +2050,7 @@ test("appearance controller falls back safely for unknown or corrupt stored pref
     "focus-mark": "unknown"
   });
   const controller = createAppearanceController(fixture);
-  assert.deepEqual(controller.initialize(), { theme: "green", mark: "dot", homeIcon: "planet" });
+  assert.deepEqual(controller.initialize(), { theme: "green", mark: "dot" });
   assert.equal(fixture.css.get("--bg"), "#101915");
   assert.equal(fixture.brand.textContent, "●");
   assert.equal(fixture.themes.find(button => button.dataset.theme === "green").selected, true);
@@ -2070,7 +2062,7 @@ test("appearance controller normalizes invalid runtime choices before saving", (
   controller.initialize();
   controller.setTheme("not-a-theme");
   controller.setMark("not-a-mark");
-  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot", homeIcon: "planet" });
+  assert.deepEqual(controller.getState(), { theme: "green", mark: "dot" });
   assert.deepEqual(JSON.parse(fixture.values.get("focus-appearance")), { theme: "green", mark: "dot" });
   assert.equal(fixture.values.get("focus-mark"), "dot");
 });
@@ -2081,11 +2073,9 @@ test("appearance controller removes only its own button listeners on destroy", (
   controller.initialize();
   assert.equal(fixture.themes[0].listenerCount, 1);
   assert.equal(fixture.marks[0].listenerCount, 1);
-  assert.equal(fixture.homeIcons[0].listenerCount, 1);
   controller.destroy();
   assert.equal(fixture.themes[0].listenerCount, 0);
   assert.equal(fixture.marks[0].listenerCount, 0);
-  assert.equal(fixture.homeIcons[0].listenerCount, 0);
 });
 
 
@@ -2310,20 +2300,17 @@ test("recovery inspection exposes the snapshot protected before automatic-backup
 });
 
 
-test("dedicated Home Screen icon page previews all four selectable icons and explains iOS re-add flow", async () => {
+test("Home Screen icon stays fixed while theme and in-app mark remain changeable without reinstall", async () => {
   const html = await read("../index.html");
   const controller = await read("../src/features/appearance-controller.js");
   const sw = await read("../public/sw.js");
-  assert.ok(html.includes('id="homeIconPage"'));
-  assert.ok(html.includes('id="homeIconPreview"'));
-  assert.ok(html.includes('id="homeIconPreviewName"'));
-  for (const icon of ["planet", "hourglass", "window", "comet"]) {
-    assert.ok(html.includes('data-home-icon="' + icon + '"'));
-    assert.ok(html.includes("./icons/icon-" + icon + ".png"));
-  }
-  assert.ok(html.includes("ホーム画面に追加"));
-  assert.ok(html.includes("SafariでFOCUSを開き直す"));
-  assert.ok(controller.includes('root.getElementById("homeIconPreview")'));
-  assert.ok(controller.includes('root.getElementById("homeIconPreviewName")'));
-  assert.ok(sw.includes("focus-preview-pwa-v24"));
+  assert.ok(html.includes('id="appleTouchIcon" rel="apple-touch-icon" href="./icons/icon-planet.png"'));
+  assert.ok(html.includes('id="appFavicon" rel="icon" href="./icons/icon-planet.png"'));
+  assert.ok(html.includes('class="home-icon-fixed-preview"'));
+  assert.ok(html.includes("削除・再追加は必要ない"));
+  assert.doesNotMatch(html, /homeIconPage|data-home-icon|アイコンを選ぶ/);
+  assert.doesNotMatch(controller, /setHomeIcon|focus-home-icon|appleTouchIcon|appFavicon/);
+  assert.ok(controller.includes("function setTheme"));
+  assert.ok(controller.includes("function setMark"));
+  assert.ok(sw.includes("focus-preview-pwa-v25"));
 });
