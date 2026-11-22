@@ -66,16 +66,27 @@ export function createRecoveryController({
     if (!item) return false;
     let extension = "json";
     try { JSON.parse(item.rawText); } catch { extension = "txt"; }
-    const blob = new BlobCtor([item.rawText], {
-      type: extension === "json" ? "application/json" : "text/plain"
-    });
-    const url = URLApi.createObjectURL(blob);
-    const anchor = documentRef.createElement("a");
-    anchor.href = url;
-    anchor.download = "focus-recovery-" + key + "." + extension;
-    anchor.click();
-    schedule(() => URLApi.revokeObjectURL(url), 1000);
-    return true;
+    let url = null;
+    try {
+      const blob = new BlobCtor([item.rawText], {
+        type: extension === "json" ? "application/json" : "text/plain"
+      });
+      url = URLApi.createObjectURL(blob);
+      const anchor = documentRef.createElement("a");
+      anchor.href = url;
+      anchor.download = "focus-recovery-" + key + "." + extension;
+      anchor.click();
+      schedule(() => {
+        try { URLApi.revokeObjectURL(url); } catch { /* best-effort URL cleanup */ }
+      }, 1000);
+      return true;
+    } catch {
+      if (url) {
+        try { URLApi.revokeObjectURL(url); } catch { /* best-effort URL cleanup */ }
+      }
+      onMessage("復旧用データを書き出せなかったよ。端末の空き容量やブラウザの設定を確認してね。");
+      return false;
+    }
   }
 
   function restoreSnapshot(key) {
