@@ -17,7 +17,15 @@ const studyViews=createStudyViews();
 let durations={focus:25,short:5,long:15},mode='focus',remaining=1500,total=1500,running=false,deadline=0,completed=0,minutes=0,finished=false,history={},records=[],dailyGoal=60,weeklyGoal=300,statsStore=null,calendarCursor=new Date(new Date().getFullYear(),new Date().getMonth(),1),audioContext=null,appReady=false,timerController=null;
 const labels={focus:'集中する時間',short:'短い休憩',long:'長い休憩'},hints={focus:'ひとつのことに集中しよう。',short:'少し頭を休めよう。',long:'ゆっくり休んで次のセットに備えよう。'},circ=2*Math.PI*88;
 function cycle(){return Math.max(2,Math.min(8,+$('cycleDuration').value||4))}
-function syncStatsState(state){completed=state.completed;minutes=state.minutes;history=state.history;records=state.records;dailyGoal=state.dailyGoal;weeklyGoal=state.weeklyGoal}
+function updateAutoBackupStatus(){
+ const latest=storage.getJSON('focus-auto-backup',null),previous=storage.getJSON('focus-auto-backup-previous',null);
+ const label=value=>Number.isFinite(Number(value?.savedAt))?new Date(Number(value.savedAt)).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'未作成';
+ const status=$('autoBackupStatus');if(status)status.textContent='最新：'+label(latest)+' · ひとつ前：'+label(previous)+'（この端末内）';
+ const latestButton=$('restoreLatestAutoBackup'),previousButton=$('restorePreviousAutoBackup');
+ if(latestButton)latestButton.disabled=!latest?.stats;
+ if(previousButton)previousButton.disabled=!previous?.stats;
+}
+function syncStatsState(state){completed=state.completed;minutes=state.minutes;history=state.history;records=state.records;dailyGoal=state.dailyGoal;weeklyGoal=state.weeklyGoal;updateAutoBackupStatus()}
 function updateStudySky(){
  const todayMinutes=Math.max(0,Number(history[dateKey(new Date())]||0));
  const level=getStudySkyLevel(todayMinutes);
@@ -85,6 +93,10 @@ $('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマー�
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>t.removeAttribute('aria-current'));return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>{const active=t===b;t.classList.toggle('active',active);if(active)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){studyRoom.onEnter();studyRoom.loadWeather()}updateMiniTimer()});
 const hourglass = mountHourglass({ getRemainingSeconds });
 const studyRoom = mountStudyRoom({ updateSky: updateStudySky, storage });
+$('roomClockFormat').value=storage.getText('focus-room-clock-format','24');
+$('roomShowDate').checked=storage.getText('focus-room-show-date','true')!=='false';
+$('roomClockFormat').addEventListener('change',()=>{if(!studyRoom.setClockFormat($('roomClockFormat').value))$('toast').textContent='時計の設定を保存できなかったよ。'});
+$('roomShowDate').addEventListener('change',()=>{if(!studyRoom.setShowDate($('roomShowDate').checked))$('toast').textContent='日付の設定を保存できなかったよ。'});
 function refreshAfterReturn(){if(running)timerController.tick();hourglass.tick();timerController.setVisible(true);hourglass.setVisible(true);studyRoom.onVisible()}
 document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('app-document-hidden',document.hidden);if(document.hidden){timerController.setVisible(false);hourglass.setVisible(false)}else refreshAfterReturn()});
 // iOS Safari may restore a page from the back-forward cache without a full reload.
@@ -114,7 +126,16 @@ const recoveryController=createRecoveryController({
  confirmAction:message=>confirm(message),
  documentRef:document,URLApi:URL,BlobCtor:Blob
 });
-const statsLoad=statsStore.load();if(statsLoad.message)$('toast').textContent=statsLoad.message;
+const statsLoad=statsStore.load();if(statsLoad.message)$('toast').textContent=statsLoad.message;statsStore.createAutoBackup({onlyIfMissing:true});updateAutoBackupStatus();
+function restoreAutoBackup(key){
+ const backup=storage.getJSON(key,null);if(!backup?.stats){$('toast').textContent='復元できる自動バックアップが見つからないよ。';return}
+ if(!confirm('自動バックアップから学習記録を復元する？現在の記録は復旧用に保護されるよ。'))return;
+ const result=statsStore.replaceStats(backup.stats,{backupKey:'focus-pre-auto-restore',backupPayload:statsStore.exportStats()});
+ if(!result.ok){$('toast').textContent='自動バックアップを復元できなかったよ。';return}
+ $('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;renderAllRecords();$('toast').textContent='自動バックアップから復元したよ。';
+}
+$('restoreLatestAutoBackup').onclick=()=>restoreAutoBackup('focus-auto-backup');
+$('restorePreviousAutoBackup').onclick=()=>restoreAutoBackup('focus-auto-backup-previous');
 timerController.restore();
 
 $('dailyGoal').value=dailyGoal;$('weeklyGoal').value=weeklyGoal;
