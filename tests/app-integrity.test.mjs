@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v17"));
+  assert.ok(sw.includes("focus-preview-pwa-v18"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v17");
+  assert.equal(cacheName, "focus-preview-pwa-v18");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v17';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v18';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -1790,6 +1790,7 @@ function createFakeAudioHarness(options = {}) {
     root,
     getAudioContextConstructor: () => options.unsupported ? null : FakeAudioContext,
     getVolume: () => options.volume ?? 0.6,
+    getLayerVolume: kind => ({rain:0.5,wind:0.35,noise:0.2})[kind],
     onUnsupported: () => unsupported++,
     random: () => 0.75
   });
@@ -1814,7 +1815,10 @@ test("ambient sound presets replace layers and volume changes reach every active
   assert.deepEqual(h.controller.getActiveLayers(), ['rain','noise']);
   assert.equal(h.presetButtons.find(button => button.dataset.soundPreset === 'rainy').classList.selected, true);
   h.controller.setVolume(0.4);
-  assert.deepEqual(h.gains.map(gain => gain.gain.target), [[0.2,10,0.08],[0.2,10,0.08]]);
+  assert.deepEqual(h.gains.map(gain => gain.gain.target), [[0.2,10,0.08],[0.08000000000000002,10,0.08]]);
+  h.controller.setLayerVolume('rain',0.75);
+  assert.deepEqual(h.gains[0].gain.target, [0.30000000000000004,10,0.08]);
+  assert.equal(h.controller.setLayerVolume('invalid',0.5), false);
   h.controller.setPreset('off');
   assert.deepEqual(h.controller.getActiveLayers(), []);
   assert.ok(h.sources.every(source => source.stoppedAt === 10.5));
@@ -1841,6 +1845,8 @@ test("main delegates ambient sound controls to the dedicated controller", async 
   assert.ok(script.includes("createAmbientSoundController"));
   assert.ok(script.includes("ambientSound.setPreset"));
   assert.ok(script.includes("ambientSound.setVolume"));
+  assert.ok(script.includes("ambientSound.setLayerVolume"));
+  assert.ok(script.includes("focus-sound-levels"));
   assert.doesNotMatch(script, /const ambientLayers=\{\}/);
 });
 
@@ -2155,4 +2161,17 @@ test("Study Room remembers a gentle local-only return message without affecting 
   assert.ok(script.includes("studyRoom.onEnter()"));
   assert.ok(html.includes('id="studyRoomReturn"'));
   assert.ok(!room.includes("focus-timer-runtime"));
+});
+
+
+test("ambient sound mixer exposes independent persistent controls for every layer", async () => {
+  const html = await read("../index.html");
+  const script = await read("../src/main.js");
+  const controller = await read("../src/features/ambient-sound.js");
+  for (const kind of ["rain", "wind", "noise"]) {
+    assert.ok(html.includes('id="soundVolume-' + kind + '"'));
+    assert.ok(script.includes("$('soundVolume-'+kind)"));
+  }
+  assert.ok(controller.includes("function setLayerVolume(kind, volume)"));
+  assert.ok(controller.includes("getLayerVolume"));
 });

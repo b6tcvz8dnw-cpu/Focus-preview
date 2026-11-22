@@ -3,6 +3,7 @@ export function createAmbientSoundController({
   root = document,
   getAudioContextConstructor = () => globalThis.AudioContext || globalThis.webkitAudioContext,
   getVolume = () => 0.5,
+  getLayerVolume = () => 0.5,
   getExistingAudioContext = () => null,
   onContextCreated = () => {},
   onUnsupported = () => {},
@@ -10,6 +11,10 @@ export function createAmbientSoundController({
 } = {}) {
   const layers = new Map();
   let context = null;
+  let masterVolume = Math.max(0, Math.min(1, Number(getVolume()) || 0));
+  const layerVolumes = {};
+  const clampVolume = value => Math.max(0, Math.min(1, Number(value) || 0));
+  const volumeFor = kind => (Object.hasOwn(layerVolumes, kind) ? layerVolumes[kind] : clampVolume(getLayerVolume(kind))) * masterVolume;
   const presets = {
     rainy: ['rain', 'noise'],
     breeze: ['wind'],
@@ -91,7 +96,7 @@ export function createAmbientSoundController({
       filter.type = kind === 'rain' ? 'lowpass' : kind === 'wind' ? 'lowpass' : 'bandpass';
       filter.frequency.value = kind === 'rain' ? 1100 : kind === 'wind' ? 380 : 520;
       const gain = context.createGain();
-      gain.gain.value = Math.max(0, Number(getVolume()) || 0) / Math.max(1, layers.size + 1);
+      gain.gain.value = volumeFor(kind);
       source.connect(filter);
       filter.connect(gain);
       gain.connect(context.destination);
@@ -118,14 +123,22 @@ export function createAmbientSoundController({
     updatePresetButtons(Object.hasOwn(presets, name) ? name : null);
   }
   function setVolume(volume) {
-    const count = Math.max(1, layers.size);
-    const target = Math.max(0, Math.min(1, Number(volume) || 0)) / count;
-    for (const layer of layers.values()) {
-      try { layer.gain.gain.setTargetAtTime(target, context.currentTime, 0.08); } catch {}
+    masterVolume = clampVolume(volume);
+    for (const [kind, layer] of layers) {
+      try { layer.gain.gain.setTargetAtTime(volumeFor(kind), context.currentTime, 0.08); } catch {}
     }
   }
+  function setLayerVolume(kind, volume) {
+    if (!['rain', 'wind', 'noise'].includes(kind)) return false;
+    layerVolumes[kind] = clampVolume(volume);
+    const layer = layers.get(kind);
+    if (layer && context) {
+      try { layer.gain.gain.setTargetAtTime(volumeFor(kind), context.currentTime, 0.08); } catch {}
+    }
+    return true;
+  }
   return {
-    toggle, setLayer, setPreset, setVolume, stop,
+    toggle, setLayer, setPreset, setVolume, setLayerVolume, stop,
     getActiveLayers: () => [...layers.keys()],
     destroy() { stop(); }
   };
