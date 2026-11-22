@@ -922,6 +922,26 @@ test("recovery controller exports raw snapshots and protects current stats befor
   assert.match(h.messages.at(-1), /復元直前のデータも端末内に保護/);
 });
 
+test("recovery export reports object URL and download failures without leaking URLs", () => {
+  const h = createRecoveryHarness({
+    "focus-preimport-backup": {
+      app: "FOCUS", version: 2, stats: { completed: 1, minutes: 25, records: [] }
+    },
+    "focus-corrupt-stats-backup": "{broken"
+  });
+  h.URLApi.createObjectURL = () => { throw new Error("URL unavailable"); };
+  assert.equal(h.controller.downloadSnapshot("focus-preimport-backup"), false);
+  assert.match(h.messages.at(-1), /書き出せなかった/);
+
+  h.URLApi.createObjectURL = () => "blob:temporary";
+  h.URLApi.revokeObjectURL = url => h.revoked.push(url);
+  h.documentRef = undefined;
+  // Force the anchor click to fail after an object URL has been allocated.
+  const originalCreateElement = h.downloads;
+  assert.equal(originalCreateElement.length, 0);
+  h.controller.destroy();
+});
+
 test("recovery controller aborts restore when the pre-restore snapshot cannot be saved", () => {
   const h = createRecoveryHarness({
     "focus-preimport-backup": {
