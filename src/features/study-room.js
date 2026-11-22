@@ -94,8 +94,6 @@ export function mountStudyRoom({ root = document, updateSky = () => {}, storage 
   }
   function setClockFormat(value){if(value!=='12'&&value!=='24')return false;if(!storage?.setText('focus-room-clock-format',value))return false;clockFormat=value;update();return true;}
   function setShowDate(value){const next=!!value;if(!storage?.setText('focus-room-show-date',String(next)))return false;showDate=next;update();return true;}
-  function setClockFormat(value){if(value!=='12'&&value!=='24')return false;if(!storage?.setText('focus-room-clock-format',value))return false;clockFormat=value;update();return true;}
-  function setShowDate(value){const next=!!value;if(!storage?.setText('focus-room-show-date',String(next)))return false;showDate=next;update();return true;}
   const handleWeatherClick=()=>{roomWeatherAttempted=false;loadWeather(true);};
   $('studyRoomWeather').addEventListener('click',handleWeatherClick);
   update();
