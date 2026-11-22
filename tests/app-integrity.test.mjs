@@ -2273,3 +2273,18 @@ test("landscape immersive timer hides optional session metadata fields to protec
   assert.match(styles, /body\.timer-large-mode #timerPanel \.session-subject-control/);
   assert.match(styles, /body\.timer-large-mode #timerPanel \.session-intention-control/);
 });
+
+
+test("recovery inspection exposes the snapshot protected before automatic-backup restore", () => {
+  const payload = JSON.stringify({
+    schemaVersion: CURRENT_DATA_SCHEMA_VERSION,
+    records: [{ id: "before-auto-restore", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" }]
+  });
+  const store = {
+    getText: (key, fallback = null) => key === "focus-pre-auto-restore" ? payload : fallback
+  };
+  const item = inspectRecoverySnapshots(store).find(entry => entry.key === "focus-pre-auto-restore");
+  assert.equal(item.available, true);
+  assert.equal(item.restorable, true);
+  assert.equal(item.stats.records[0].id, "before-auto-restore");
+});
