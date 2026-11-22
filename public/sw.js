@@ -1,5 +1,6 @@
 const CACHE='focus-preview-pwa-v23';
 const CACHE_PREFIX='focus-preview-';
+// Keep all selectable home-screen icon PNGs available while offline.
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icons/icon-planet.svg','./icons/icon-hourglass.svg','./icons/icon-window.svg','./icons/icon-comet.svg','./icons/icon-planet.png','./icons/icon-hourglass.png','./icons/icon-window.png','./icons/icon-comet.png',...BUILD_ASSETS];
 
