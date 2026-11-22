@@ -331,3 +331,6 @@ Initial findings:
 - Cache v14 retains network-first navigation with cached `index.html` fallback, cache-first same-origin assets, cross-origin bypass, and successful-response-only writes. The build script verifies all generated Vite assets are included in the precache. First launch still requires a network connection to install/cache the app shell; offline launch is only expected after a successful initial install/cache.
 - Added a regression assertion that the Service Worker does not call `skipWaiting()` and still claims clients after activation. Phase 8 is in progress; the Preview deployment remains separate from production.
 
+- Navigation fallback audit found that the previous network-first route only used the cached app shell when fetch rejected. An HTTP 5xx response could still replace the app with a server error page even when a valid cached shell existed.
+- Updated Preview Service Worker to use the cached navigation response or cached `index.html` for both HTTP error responses and network failures; if no cached shell exists, the original HTTP error response is preserved. Cache namespace advanced to v15.
+- Added an executable Service Worker regression test for both HTTP 503 and offline network rejection. Production remains untouched.
