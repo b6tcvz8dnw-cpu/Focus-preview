@@ -605,7 +605,7 @@ test("startup restores timer only after statistics and completion callbacks are 
   const restore = script.indexOf("timerController.restore()");
   const controller = script.indexOf("timerController=createTimerController(");
   assert.ok(controller >= 0 && statsLoad > controller && restore > statsLoad);
-  assert.ok(script.includes("onFocusComplete(){"), "focus completion callback must be registered before restore");
+  assert.ok(script.includes("onFocusComplete({actualSeconds="), "focus completion callback must be registered before restore");
   assert.ok(script.includes("if(appReady){"), "startup completion must defer UI-only effects");
   assert.ok(script.includes("appReady=true;"), "UI becomes ready after initial rendering");
   const timer = await read("../src/features/timer-controller.js");
@@ -645,7 +645,7 @@ test("focus completion callback is the only session-record creation path", async
   const created = [...script.matchAll(/statsStore\.addSession\(record\)/g)];
   assert.equal(created.length, 1);
   assert.ok(script.includes("onFocusComplete(){"));
-  assert.ok(script.includes("minutes:durations.focus"));
+  assert.ok(script.includes("minutes:Math.min(120,actualMinutes)"));
   assert.ok(script.includes("if(appReady){"));
 });
 
@@ -1342,7 +1342,7 @@ test("timer controller starts, pauses, and persists a deadline-based runtime", (
   h.controller.start();
   assert.deepEqual(h.controller.getState(), {
     durations: { focus: 1, short: 1, long: 2 }, mode: "focus",
-    remaining: 60, total: 60, running: true, deadline: 61000, finished: false
+    remaining: 60, total: 60, running: true, deadline: 61000, finished: false, focusElapsedSeconds: 0
   });
   h.advance(12500);
   h.controller.pause();
