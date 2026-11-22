@@ -716,7 +716,7 @@ function createRecoveryHarness(initial = {}) {
     onMessage: message => messages.push(message),
     onRestored: () => restored.push(true)
   });
-  return { values, storage, root, downloads, revoked, URLApi, messages, restored, replacements, controller };
+  return { values, storage, root, downloads, revoked, URLApi, documentRef, messages, restored, replacements, controller };
 }
 
 function createBackupImportHarness(options = {}) {
@@ -934,11 +934,10 @@ test("recovery export reports object URL and download failures without leaking U
   assert.match(h.messages.at(-1), /書き出せなかった/);
 
   h.URLApi.createObjectURL = () => "blob:temporary";
-  h.URLApi.revokeObjectURL = url => h.revoked.push(url);
-  h.documentRef = undefined;
-  // Force the anchor click to fail after an object URL has been allocated.
-  const originalCreateElement = h.downloads;
-  assert.equal(originalCreateElement.length, 0);
+  h.documentRef.createElement = () => ({ click() { throw new Error("download blocked"); } });
+  assert.equal(h.controller.downloadSnapshot("focus-corrupt-stats-backup"), false);
+  assert.deepEqual(h.revoked, ["blob:temporary"]);
+  assert.match(h.messages.at(-1), /書き出せなかった/);
   h.controller.destroy();
 });
 
