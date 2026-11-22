@@ -7,6 +7,7 @@ const THEMES = {
 };
 const MARKS = { dot: "●", star: "✦", leaf: "❧" };
 const HOME_ICONS = { planet: "./icons/icon-planet.png", hourglass: "./icons/icon-hourglass.png", window: "./icons/icon-window.png", comet: "./icons/icon-comet.png" };
+const HOME_ICON_LABELS = { planet: "小さな惑星", hourglass: "砂時計", window: "書斎の窓", comet: "流れ星" };
 
 export function createAppearanceController({ root, storage, onMessage = () => {} }) {
   if (!root || !storage) throw new TypeError("root and storage are required");
@@ -47,6 +48,13 @@ export function createAppearanceController({ root, storage, onMessage = () => {}
       const link = root.querySelector(selector);
       if (link) link.setAttribute("href", href);
     }
+    const preview = root.getElementById("homeIconPreview");
+    if (preview) {
+      preview.setAttribute("src", href);
+      preview.setAttribute("alt", HOME_ICON_LABELS[name] + "のホーム画面アイコン");
+    }
+    const previewName = root.getElementById("homeIconPreviewName");
+    if (previewName) previewName.textContent = HOME_ICON_LABELS[name];
     for (const button of root.querySelectorAll("[data-home-icon]")) {
       const active = button.dataset.homeIcon === name;
       button.classList.toggle("selected", active);
