@@ -39,7 +39,20 @@ function update(){
  $('setLabel').textContent=(completed%cycle())+' / '+cycle()+' セッション';
  [...$('dots').children].forEach((d,i)=>d.classList.toggle('done',i<completed%cycle()));
  document.title=fmt(remaining)+' | FOCUS';
+ updateMiniTimer();
  document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
+}
+function updateMiniTimer(){
+ const panel=$('miniTimer');
+ if(!panel)return;
+ const currentPage=document.querySelector('.page:not([hidden])')?.id||'timerPage';
+ const visible=currentPage!=='timerPage'&&(running||remaining!==total);
+ panel.hidden=!visible;
+ if(!visible)return;
+ $('miniTimerClock').textContent=fmt(remaining);
+ $('miniTimerMode').textContent=labels[mode];
+ $('miniTimerToggle').textContent=running?'Ⅱ 一時停止':'▶ 再開';
+ $('miniTimerToggle').setAttribute('aria-label',running?'タイマーを一時停止':'タイマーを再開');
 }
 let notificationsEnabled=false;
 const notificationController=createNotificationController({
@@ -62,13 +75,14 @@ function setLargeMode(enabled){
  if(!enabled&&orientation&&typeof orientation.unlock==='function'){try{orientation.unlock()}catch(e){}}
 }
 $('largeToggle').onclick=()=>setLargeMode(!document.body.classList.contains('timer-large-mode'));
+$('miniTimerToggle').onclick=()=>{if(running)timerController.pause();else if(!finished)timerController.start();else timerController.start()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('timer-large-mode'))setLargeMode(false)});
 $('reset').onclick=()=>{if(running&&!confirm('進行中のタイマーをリセットする？'))return;timerController.reset();$('toast').textContent='タイマーをリセットしたよ。'};
 $('skip').onclick=()=>{if(running&&!confirm('タイマーを停止して次の時間に切り替える？'))return;timerController.skip();$('toast').textContent='次の時間に切り替えたよ。'};
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{if(running&&!confirm('タイマーを停止してモードを切り替える？'))return;timerController.setMode(b.dataset.mode)});
 $('apply').onclick=()=>{if((running||remaining!==total)&&!confirm('タイマーの設定を変更すると、現在のセッションは最初からになるよ。変更してもいい？'))return;let vals={focus:+$('focusDuration').value,short:+$('shortDuration').value,long:+$('longDuration').value,cycle:+$('cycleDuration').value};if(vals.focus<1||vals.focus>120||vals.short<1||vals.short>60||vals.long<1||vals.long>90||vals.cycle<2||vals.cycle>8||Object.values(vals).some(v=>!Number.isInteger(v))){$('toast').textContent='設定値を範囲内の整数で入力してね。';return}if(!storage.setJSON('focus-timer-settings',vals)){$('toast').textContent='タイマー設定を保存できなかったよ。端末の空き容量やブラウザの状態を確認してね。';return}timerController.setDurations({focus:vals.focus,short:vals.short,long:vals.long});$('toast').textContent='タイマー設定を保存したよ。'};
 
-document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>t.removeAttribute('aria-current'));return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>{const active=t===b;t.classList.toggle('active',active);if(active)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){studyRoom.onEnter();studyRoom.loadWeather()}});
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{if(b.dataset.page==='settingsPage'){document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>t.removeAttribute('aria-current'));return}setStudyRoomMode(b.dataset.page==='studyRoomPage');document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==b.dataset.page);document.querySelectorAll('.tab[data-page]').forEach(t=>{const active=t===b;t.classList.toggle('active',active);if(active)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current')});if(b.dataset.page==='overviewPage')renderAllRecords();if(b.dataset.page==='calendarPage')renderCalendar();if(b.dataset.page==='analyticsPage')renderAnalytics();if(b.dataset.page==='studyRoomPage'){studyRoom.onEnter();studyRoom.loadWeather()}updateMiniTimer()});
 const hourglass = mountHourglass({ getRemainingSeconds });
 const studyRoom = mountStudyRoom({ updateSky: updateStudySky, storage });
 function refreshAfterReturn(){if(running)timerController.tick();hourglass.tick();timerController.setVisible(true);hourglass.setVisible(true);studyRoom.onVisible()}
