@@ -2143,3 +2143,16 @@ test("landscape large timer scales clock text to the circular timer container", 
   assert.match(styles, /max-width:100%/);
   assert.match(styles, /line-height:1/);
 });
+
+
+test("Study Room remembers a gentle local-only return message without affecting timer state", async () => {
+  const room = await read("../src/features/study-room.js");
+  const script = await read("../src/main.js");
+  const html = await read("../index.html");
+  assert.ok(room.includes('storage?.getJSON("focus-room-last-visit", null)'));
+  assert.ok(room.includes('storage?.setJSON("focus-room-last-visit"'));
+  assert.ok(room.includes("function onEnter()"));
+  assert.ok(script.includes("studyRoom.onEnter()"));
+  assert.ok(html.includes('id="studyRoomReturn"'));
+  assert.ok(!room.includes("focus-timer-runtime"));
+});
