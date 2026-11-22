@@ -18,8 +18,6 @@ export function mountStudyRoom({ root = document, updateSky = () => {}, storage 
   let roomWeather=null,roomWeatherLoading=false,roomWeatherAttempted=false,roomWeatherFetchedAt=0,destroyed=false,weatherRequest=null,weatherTimeout=null;
   let clockFormat=storage?.getText('focus-room-clock-format','24')==='12'?'12':'24';
   let showDate=storage?.getText('focus-room-show-date','true')!=='false';
-  let clockFormat=storage?.getText('focus-room-clock-format','24')==='12'?'12':'24';
-  let showDate=storage?.getText('focus-room-show-date','true')!=='false';
   const weatherLabels=code=>{
     if(code===0)return ['晴れ','☀'];if(code===1)return ['おおむね晴れ','🌤'];if(code===2)return ['晴れ時々くもり','⛅'];if(code===3)return ['くもり','☁'];
     if(code===45||code===48)return ['霧','🌫'];if([51,53,55,56,57].includes(code))return ['霧雨','🌦'];
