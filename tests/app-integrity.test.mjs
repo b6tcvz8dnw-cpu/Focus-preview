@@ -771,7 +771,7 @@ function createBackupImportHarness(options = {}) {
 
 test("backup import rejects oversized text before parsing or mutating data", async () => {
   const h = createBackupImportHarness();
-  const result = await h.controller.importText(" ".repeat(MAX_BACKUP_BYTES + 1));
+  const result = await h.controller.importText("あ".repeat(Math.floor(MAX_BACKUP_BYTES / 3) + 1));
   assert.deepEqual(result, { ok: false, stage: "size" });
   assert.equal(h.events.length, 0);
   assert.equal(h.replacements.length, 0);
