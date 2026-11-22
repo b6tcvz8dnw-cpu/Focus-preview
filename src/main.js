@@ -52,7 +52,15 @@ const notificationController=createNotificationController({
 function notify(title){notificationController.notify(title)}
 function playCompletionSound(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=audioContext||new C();audioContext=c;c.resume().then(()=>{[660,880].forEach((hz,i)=>{const o=c.createOscillator(),g=c.createGain(),t=c.currentTime+i*.16;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.42);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.45)})}).catch(()=>{})}catch(e){}}
 $('start').onclick=()=>{if(running){timerController.pause();return}if(finished){$('toast').textContent='次のモードを選んでスタートしよう。';return}timerController.start()};
-function setLargeMode(enabled){document.body.classList.toggle('timer-large-mode',enabled);$('largeToggle').setAttribute('aria-pressed',String(enabled));$('largeToggle').textContent=enabled?'⤢ 通常表示':'⛶ 大画面';}
+function setLargeMode(enabled){
+ document.body.classList.toggle('timer-large-mode',enabled);
+ $('largeToggle').setAttribute('aria-pressed',String(enabled));
+ $('largeToggle').textContent=enabled?'⤢ 通常表示':'⛶ 大画面';
+ // Lock landscape where the browser supports it; iOS Safari may require manual rotation.
+ const orientation=window.screen?.orientation;
+ if(enabled&&orientation&&typeof orientation.lock==='function')orientation.lock('landscape').catch(()=>{});
+ if(!enabled&&orientation&&typeof orientation.unlock==='function'){try{orientation.unlock()}catch(e){}}
+}
 $('largeToggle').onclick=()=>setLargeMode(!document.body.classList.contains('timer-large-mode'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('timer-large-mode'))setLargeMode(false)});
 $('reset').onclick=()=>{if(running&&!confirm('進行中のタイマーをリセットする？'))return;timerController.reset();$('toast').textContent='タイマーをリセットしたよ。'};

@@ -79,3 +79,66 @@ textarea.field-select{font-family:inherit;resize:vertical;min-height:80px}
 .analytics-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}.analytics-row:last-child{border:0}
 .import-label{display:block;text-align:center;border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text);font-size:13px;margin-top:9px}
 
+
+
+/* Landscape-first composition for the immersive timer on phones. */
+@media (orientation:landscape) and (max-height:600px) {
+ body.timer-large-mode { overflow:hidden; }
+ body.timer-large-mode main { padding:0; margin:0; max-width:none; min-height:100dvh; }
+ body.timer-large-mode header,
+ body.timer-large-mode .timer-page-tools,
+ body.timer-large-mode #timerPage>details,
+ body.timer-large-mode .tabbar,
+ body.timer-large-mode .foot,
+ body.timer-large-mode #toast { display:none!important; }
+ body.timer-large-mode #timerPage { display:block; }
+ body.timer-large-mode #timerPanel {
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(190px,.85fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"modes modes" "timer controls" "hint hint";
+  align-items:center;
+  justify-items:stretch;
+  gap:clamp(5px,1.6vh,12px);
+  padding:
+   max(env(safe-area-inset-top),10px)
+   max(env(safe-area-inset-right),24px)
+   max(env(safe-area-inset-bottom),10px)
+   max(env(safe-area-inset-left),24px);
+  overflow:hidden;
+ }
+ body.timer-large-mode #timerPanel .modes { grid-area:modes; width:min(100%,680px); }
+ body.timer-large-mode #timerPanel .timer {
+  grid-area:timer;
+  width:min(48vh,38vw,310px);
+  max-width:100%;
+  margin:0 auto;
+ }
+ body.timer-large-mode #timerPanel .clock {
+  font-size:clamp(48px,9vw,88px);
+  letter-spacing:clamp(-4px,-.45vw,-2px);
+ }
+ body.timer-large-mode #timerPanel .mode-label { font-size:clamp(12px,2vw,17px); }
+ body.timer-large-mode #timerPanel .controls {
+  grid-area:controls;
+  width:min(100%,300px);
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:clamp(6px,1.5vh,12px);
+  margin:0 auto;
+ }
+ body.timer-large-mode #timerPanel .controls button {
+  width:100%;
+  max-width:none;
+  min-height:44px;
+  margin:0;
+ }
+ body.timer-large-mode #timerPanel .controls .primary { min-height:50px; }
+ body.timer-large-mode #timerPanel .hint {
+  grid-area:hint;
+  align-self:end;
+  font-size:clamp(10px,1.7vw,13px);
+  margin:0;
+ }
+}
