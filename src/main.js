@@ -114,7 +114,7 @@ const appearanceController=createAppearanceController({root:document,storage,onM
 appearanceController.initialize();
 try{const ts=normalizeTimerSettings(storage.getJSON('focus-timer-settings',null));if(ts){durations={focus:ts.focus,short:ts.short,long:ts.long};$('focusDuration').value=ts.focus;$('shortDuration').value=ts.short;$('longDuration').value=ts.long;$('cycleDuration').value=ts.cycle;storage.setJSON('focus-timer-settings',ts)}}catch(e){}
 function syncTimerState(state){durations=state.durations;mode=state.mode;remaining=state.remaining;total=state.total;running=state.running;deadline=state.deadline;finished=state.finished;update()}
-timerController=createTimerController({durations,getCycleLength:cycle,getCompletedSessions:()=>completed,store:storage,onChange:syncTimerState,onFocusComplete({actualSeconds=durations.focus*60}={}){const actualMinutes=Math.floor(Math.max(0,Number(actualSeconds)||0)/60);const record=actualMinutes>=1?{id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:Math.min(120,actualMinutes),note:'',subject:$('sessionSubject').value||'',intention:$('sessionIntention').value.trim()}:null;const saved=record?statsStore.addSession(record):true;if(saved&&record)updateChart();notify('集中セッション完了！休憩を始めよう。');if(!saved)$('toast').textContent='集中記録を保存できなかったよ。端末の空き容量を確認してね。';playCompletionSound();if(appReady){$('reflection').value='';$('sessionIntention').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}},onBreakComplete(){notify('休憩終了！お疲れさま。');playCompletionSound()}});
+timerController=createTimerController({durations,getCycleLength:cycle,getCompletedSessions:()=>completed,store:storage,onChange:syncTimerState,onFocusComplete({actualSeconds=durations.focus*60}={}){const actualMinutes=Math.floor(Math.max(0,Number(actualSeconds)||0)/60);const record=actualMinutes>=1?{id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),timestamp:Date.now(),date:dateKey(new Date()),minutes:Math.min(120,actualMinutes),note:'',intention:$('sessionIntention').value.trim()}:null;const saved=record?statsStore.addSession(record):true;if(saved&&record)updateChart();notify('集中セッション完了！休憩を始めよう。');if(!saved)$('toast').textContent='集中記録を保存できなかったよ。端末の空き容量を確認してね。';playCompletionSound();if(appReady){$('reflection').value='';$('sessionIntention').value='';$('reflectionPrompt').textContent='今のセッションで気づいたことを残してみよう。';renderAllRecords();$('reflectionPanel').open=true;$('reflectionPanel').scrollIntoView({behavior:'smooth',block:'nearest'})}},onBreakComplete(){notify('休憩終了！お疲れさま。');playCompletionSound()}});
 ({durations,mode,remaining,total,running,deadline,finished}=timerController.getState());
 
 
@@ -144,12 +144,12 @@ function renderGoals(){studyViews.renderGoals({history,dailyGoal,weeklyGoal})}
 function renderCalendar(){studyViews.renderCalendar({history,cursor:calendarCursor})}
 $('monthPrev').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);renderCalendar()};
 $('monthNext').onclick=()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);renderCalendar()};
-function renderHistory(){studyViews.renderHistory({records,query:$('historySearch')?.value||'',reflectionOnly:$('reflectionOnly')?.checked||false,subject:$('historySubject')?.value||'',period:$('historyPeriod')?.value||'all'})}
+function renderHistory(){studyViews.renderHistory({records,query:$('historySearch')?.value||'',reflectionOnly:$('reflectionOnly')?.checked||false,period:$('historyPeriod')?.value||'all'})}
 $('historyList').onclick=e=>{const del=e.target.closest('[data-record-delete]'),edit=e.target.closest('[data-record-edit]');if(del){const id=del.dataset.recordDelete,r=records.find(x=>x.id===id);if(!r||!confirm('この学習記録を削除する？'))return;if(!statsStore.deleteRecord(id)){$('toast').textContent='学習記録を削除できなかったよ。';return}renderAllRecords()}else if(edit){const r=records.find(x=>x.id===edit.dataset.recordEdit);if(!r)return;const n=Number(prompt('このセッションの集中時間（分）',String(r.minutes)));if(!Number.isInteger(n)||n<1||n>120)return;if(!statsStore.updateRecord(r.id,{minutes:n})){$('toast').textContent='学習記録を更新できなかったよ。';return}renderAllRecords()}};
 let analyticsRange='day';
 function renderAnalytics(){studyViews.renderAnalytics({history,range:analyticsRange})}
 document.querySelectorAll('[data-analytics-range]').forEach(b=>b.addEventListener('click',()=>{analyticsRange=b.dataset.analyticsRange;document.querySelectorAll('[data-analytics-range]').forEach(t=>{const active=t===b;t.classList.toggle('selected',active);t.setAttribute('aria-pressed',String(active))});renderAnalytics()}));
-$('historySearch').addEventListener('input',renderHistory);$('reflectionOnly').addEventListener('change',renderHistory);$('historySubject').addEventListener('change',renderHistory);$('historyPeriod').addEventListener('change',renderHistory);
+$('historySearch').addEventListener('input',renderHistory);$('reflectionOnly').addEventListener('change',renderHistory);$('historyPeriod').addEventListener('change',renderHistory);
 function renderAllRecords(){update();updateChart();renderGoals();renderCalendar();renderHistory();renderAnalytics()}
 function saveReflection(){const r=[...records].sort((a,b)=>b.timestamp-a.timestamp)[0];if(!r){$('toast').textContent='先に集中セッションを完了してね。';return}if(!statsStore.updateRecord(r.id,{note:$('reflection').value.trim()})){$('toast').textContent='振り返りを保存できなかったよ。';return}renderHistory();$('toast').textContent='振り返りを保存したよ。'}
 $('saveReflection').onclick=saveReflection;
@@ -173,24 +173,26 @@ document.querySelectorAll('[data-sound]').forEach(b=>b.onclick=()=>ambientSound.
 document.querySelectorAll('[data-sound-preset]').forEach(b=>b.onclick=()=>ambientSound.setPreset(b.dataset.soundPreset));
 $('soundVolume').oninput=()=>ambientSound.setVolume(Number($('soundVolume').value)/100);
 for(const kind of Object.keys(soundLevelDefaults)){$('soundVolume-'+kind).oninput=()=>{soundLevels[kind]=Number($('soundVolume-'+kind).value);ambientSound.setLayerVolume(kind,soundLevels[kind]/100);if(!storage.setJSON('focus-sound-levels',soundLevels))$('toast').textContent='音量設定を保存できなかったよ。'}}
-function buildBackupPayload(){return {app:'FOCUS',version:CURRENT_BACKUP_VERSION,exportedAt:new Date().toISOString(),stats:statsStore.exportStats(),timerSettings:normalizeTimerSettings(storage.getJSON('focus-timer-settings',null)),appearance:storage.getJSON('focus-appearance',null),mark:storage.getText('focus-mark')||'dot',notificationsEnabled,quietText:storage.getText('focus-room-quiet-text')==='true'}}
+function buildBackupPayload(){return {app:'FOCUS',version:CURRENT_BACKUP_VERSION,exportedAt:new Date().toISOString(),stats:statsStore.exportStats(),timerSettings:normalizeTimerSettings(storage.getJSON('focus-timer-settings',null)),appearance:storage.getJSON('focus-appearance',null),mark:storage.getText('focus-mark')||'dot',homeIcon:storage.getText('focus-home-icon')||'planet',notificationsEnabled,quietText:storage.getText('focus-room-quiet-text')==='true'}}
 function downloadBackup(payload,filename){const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('exportData').onclick=()=>{downloadBackup(buildBackupPayload(),'focus-backup-'+dateKey(new Date())+'.json');$('toast').textContent='バックアップを書き出したよ。'};
 const importController=createBackupImportController({
  input:$('importData'),storage,statsStore,validate:validateBackupPayload,
  buildCurrentBackup:()=>buildBackupPayload(),
- captureSettings:()=>Object.fromEntries(['focus-timer-settings','focus-appearance','focus-mark','focus-notifications','focus-room-quiet-text'].map(key=>[key,storage.getText(key,null)])),
+ captureSettings:()=>Object.fromEntries(['focus-timer-settings','focus-appearance','focus-mark','focus-home-icon','focus-notifications','focus-room-quiet-text'].map(key=>[key,storage.getText(key,null)])),
  confirmAction:message=>confirm(message),
  applySettings:obj=>{
   const writes=[];
   if(obj.timerSettings)writes.push(storage.setJSON('focus-timer-settings',obj.timerSettings));
   if(obj.appearance&&obj.appearance.theme)writes.push(storage.setJSON('focus-appearance',{theme:obj.appearance.theme}));
   if(obj.mark)writes.push(storage.setText('focus-mark',obj.mark));
+   if(obj.homeIcon)writes.push(storage.setText('focus-home-icon',obj.homeIcon));
   if(typeof obj.notificationsEnabled==='boolean')writes.push(storage.setText('focus-notifications',String(obj.notificationsEnabled)));
   if(typeof obj.quietText==='boolean')writes.push(storage.setText('focus-room-quiet-text',String(obj.quietText)));
   if(writes.some(ok=>!ok))return false;
   if(obj.appearance&&obj.appearance.theme)appearanceController.setTheme(obj.appearance.theme,{persist:false});
   if(obj.mark)appearanceController.setMark(obj.mark,{persist:false});
+   if(obj.homeIcon)appearanceController.setHomeIcon(obj.homeIcon,{persist:false});
   if(typeof obj.notificationsEnabled==='boolean')notificationController.setEnabled(obj.notificationsEnabled,{persist:false});
   if(typeof obj.quietText==='boolean'){$('studyRoomView').classList.toggle('room-quiet-text',obj.quietText);$('roomTextToggle').setAttribute('aria-pressed',String(obj.quietText))}
   return true;
@@ -205,6 +207,7 @@ const importController=createBackupImportController({
   try{appearance=previous['focus-appearance']===null?null:JSON.parse(previous['focus-appearance'])}catch{}
   appearanceController.setTheme(appearance?.theme||'green',{persist:false});
   appearanceController.setMark(previous['focus-mark']||'dot',{persist:false});
+  appearanceController.setHomeIcon(previous['focus-home-icon']||'planet',{persist:false});
   notificationController.setEnabled(previous['focus-notifications']==='true',{persist:false});
   const quiet=previous['focus-room-quiet-text']==='true';
   $('studyRoomView').classList.toggle('room-quiet-text',quiet);

@@ -83,7 +83,6 @@ textarea.field-select{font-family:inherit;resize:vertical;min-height:80px}
 
 /* Landscape-first composition for the immersive timer on phones. */
 @media (orientation:landscape) and (max-height:600px) {
- body.timer-large-mode #timerPanel .session-subject-control,
  body.timer-large-mode #timerPanel .session-intention-control { display:none!important; }
  body.timer-large-mode { overflow:hidden; }
  body.timer-large-mode main { padding:0; margin:0; max-width:none; min-height:100dvh; }
