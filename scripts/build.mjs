@@ -34,7 +34,11 @@ const staticPwaAssets = [
   "./icons/icon-planet.svg",
   "./icons/icon-hourglass.svg",
   "./icons/icon-window.svg",
-  "./icons/icon-comet.svg"
+  "./icons/icon-comet.svg",
+  "./icons/icon-planet.png",
+  "./icons/icon-hourglass.png",
+  "./icons/icon-window.png",
+  "./icons/icon-comet.png"
 ];
 
 const swPath = join(dist, "sw.js");
