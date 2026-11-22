@@ -7,8 +7,8 @@
 <meta name="description" content="集中と休憩を切り替える学習用ポモドーロタイマー">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.open-meteo.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link id="appFavicon" rel="icon" href="./icon.svg" type="image/svg+xml">
+<link id="appleTouchIcon" rel="apple-touch-icon" href="./icons/icon-planet.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FOCUS">
@@ -23,7 +23,7 @@
 <div class="page" id="timerPage">
 <div class="timer-page-tools"><button class="small-settings" type="button" data-page="settingsPage" aria-label="設定を開く">⚙ 設定</button></div>
 <section class="panel" id="timerPanel">
- <label class="session-subject-control" for="sessionSubject">科目（任意）<select id="sessionSubject"><option value="">科目を選ばない</option><option value="数学">数学</option><option value="英語">英語</option><option value="国語">国語</option><option value="理科">理科</option><option value="社会">社会</option><option value="その他">その他</option></select></label><label class="session-intention-control" for="sessionIntention">今日の小さな意図（任意）<input id="sessionIntention" type="text" maxlength="120" placeholder="例：英文を一段落読む"></label><div class="modes"><button class="mode active" type="button" data-mode="focus" aria-pressed="true">集中</button><button class="mode" type="button" data-mode="short" aria-pressed="false">短い休憩</button><button class="mode" type="button" data-mode="long" aria-pressed="false">長い休憩</button></div>
+ <label class="session-intention-control" for="sessionIntention">今日の小さな意図（任意）<input id="sessionIntention" type="text" maxlength="120" placeholder="例：英文を一段落読む"></label><div class="modes"><button class="mode active" type="button" data-mode="focus" aria-pressed="true">集中</button><button class="mode" type="button" data-mode="short" aria-pressed="false">短い休憩</button><button class="mode" type="button" data-mode="long" aria-pressed="false">長い休憩</button></div>
  <div class="timer"><svg class="ring" viewBox="0 0 200 200" aria-hidden="true"><circle class="track" cx="100" cy="100" r="88"/><circle class="progress" id="progress" cx="100" cy="100" r="88"/></svg><div style="text-align:center"><div class="clock" id="clock" role="timer">25:00</div><div class="mode-label" id="modeLabel">集中する時間</div></div></div>
  <div class="controls"><button class="secondary" id="reset">↺ リセット</button><button class="primary" id="start">▶ スタート</button><button class="secondary" id="skip">次へ →</button><button class="secondary" id="largeToggle" aria-pressed="false">⛶ 大画面</button></div>
  <p class="hint" id="hint">25分間、ひとつのことに集中しよう。</p>
@@ -48,7 +48,7 @@
 <details class="panel"><summary>アチーブメント</summary><p class="muted" style="margin:12px 0 12px">累計の集中時間に応じて記録される達成バッジ。</p><div class="achievement-list" id="achievementList"></div><div class="achievement-next" id="achievementNext"></div></details>
 <section class="panel"><h2>目標の進み具合</h2><div id="goalProgress"></div><p class="muted" style="margin:10px 0 0">目標は設定画面から変更できるよ。達成できない日があっても、また次の日から始めれば大丈夫。</p></section>
 
-<section class="panel" id="historyPanel"><h2>学習履歴</h2><div class="muted" style="margin:-4px 0 10px">最近の集中セッション。記録の削除や修正もできるよ。</div><input id="historySearch" type="search" placeholder="メモや科目を検索" aria-label="履歴を検索"><div class="history-filters"><label>科目<select id="historySubject"><option value="">すべて</option><option value="数学">数学</option><option value="英語">英語</option><option value="国語">国語</option><option value="理科">理科</option><option value="社会">社会</option><option value="その他">その他</option></select></label><label>期間<select id="historyPeriod"><option value="all">すべて</option><option value="7">直近7日</option><option value="30">直近30日</option><option value="90">直近90日</option></select></label></div><label class="muted" style="display:flex;align-items:center;gap:8px;margin:0 0 10px"><input id="reflectionOnly" type="checkbox" style="width:auto;margin:0">振り返りがある記録だけ表示</label><div class="history-list" id="historyList"></div></section>
+<section class="panel" id="historyPanel"><h2>学習履歴</h2><div class="muted" style="margin:-4px 0 10px">最近の集中セッション。記録の削除や修正もできるよ。</div><input id="historySearch" type="search" placeholder="メモや意図を検索" aria-label="履歴を検索"><div class="history-filters"><label>期間<select id="historyPeriod"><option value="all">すべて</option><option value="7">直近7日</option><option value="30">直近30日</option><option value="90">直近90日</option></select></label></div><label class="muted" style="display:flex;align-items:center;gap:8px;margin:0 0 10px"><input id="reflectionOnly" type="checkbox" style="width:auto;margin:0">振り返りがある記録だけ表示</label><div class="history-list" id="historyList"></div></section>
 
 </div>
 <div class="page" id="calendarPage" hidden><section class="panel" id="calendarPanel"><div class="calendar-head"><button id="monthPrev" aria-label="前の月">‹</button><h2 id="calendarTitle" style="margin:0">月間カレンダー</h2><button id="monthNext" aria-label="次の月">›</button></div><div class="calendar-grid" id="calendarGrid"></div><p class="muted" style="margin:10px 0 0">丸印が大きい日ほど集中時間が長いよ。</p></section></div>
@@ -182,13 +182,20 @@
    <button class="theme-choice" data-theme="amber" aria-pressed="false"><i style="background:#e7b96f"></i>アンバー</button>
    <button class="theme-choice" data-theme="rose" aria-pressed="false"><i style="background:#e6a0ad"></i>ローズ</button>
   </div>
+  <div class="muted" style="margin:16px 0 10px">ホーム画面のアイコン</div>
+  <div class="mark-grid" role="group" aria-label="ホーム画面のアイコン">
+   <button class="mark-choice selected" data-home-icon="planet" aria-pressed="true">◉ 小さな惑星</button>
+   <button class="mark-choice" data-home-icon="hourglass" aria-pressed="false">⌛ 砂時計</button>
+   <button class="mark-choice" data-home-icon="window" aria-pressed="false">▣ 書斎の窓</button>
+   <button class="mark-choice" data-home-icon="comet" aria-pressed="false">✦ 流れ星</button>
+  </div>
   <div class="muted" style="margin:16px 0 10px">アプリ内マーク</div>
   <div class="mark-grid" role="group" aria-label="アプリ内マーク">
    <button class="mark-choice selected" data-mark="dot" aria-pressed="true">● ドット</button>
    <button class="mark-choice" data-mark="star" aria-pressed="false">✦ スター</button>
    <button class="mark-choice" data-mark="leaf" aria-pressed="false">❧ リーフ</button>
   </div>
-  <p class="muted" style="margin:14px 0 0">テーマカラーを変えると、アクセントだけでなく背景・カード・境界線・文字色もまとめて切り替わるよ。<br>マークはアプリ画面内の表示だよ。iPhoneホーム画面のアイコンはPWAの仕様上、この画面からは切り替えられないよ。</p>
+  <p class="muted" style="margin:14px 0 0">テーマカラーは背景やカードにも反映されるよ。ホーム画面アイコンは次回の追加時に選択が反映される設計だよ。すでに追加済みのアイコンはiOS側に保存・キャッシュされるため、変更後に一度ホーム画面から削除してSafariで再追加すると反映されやすいよ。</p>
  </details>
  <details class="panel"><summary>目標設定</summary><div class="settings"><label>1日の目標（分）<input id="dailyGoal" type="number" min="0" max="1440" value="60"></label><label>1週間の目標（分）<input id="weeklyGoal" type="number" min="0" max="10080" value="300"></label></div><button class="secondary wide" id="saveGoals">目標を保存</button></details>
 <details class="panel"><summary>自動バックアップ</summary><p class="muted">学習記録を変更するたびに、この端末内へ最新とひとつ前の2世代を自動保存するよ。端末間同期やクラウド保存ではないので、機種変更前にはJSONを書き出してね。</p><p class="muted" id="autoBackupStatus">自動バックアップを確認中…</p><div class="settings"><button class="secondary wide" id="restoreLatestAutoBackup" type="button">最新の自動バックアップから復元</button><button class="secondary wide" id="restorePreviousAutoBackup" type="button">ひとつ前の自動バックアップから復元</button></div></details>
