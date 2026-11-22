@@ -162,6 +162,7 @@
 </div>
 <div class="page" id="settingsPage" hidden>
  <section class="panel"><h2 style="margin:0 0 6px">設定</h2><p class="muted" style="margin:0 0 12px">タイマーや書斎の環境を、自分の使いやすい形に整えられるよ。</p><button class="secondary wide" type="button" data-page="timerPage">← タイマーへ戻る</button></section>
+ <details class="panel"><summary>書斎の時計</summary><label class="muted" for="roomClockFormat">時刻の表示</label><select id="roomClockFormat"><option value="24">24時間表示</option><option value="12">12時間表示（午前・午後）</option></select><label class="muted" style="display:flex;align-items:center;gap:8px;margin-top:12px"><input id="roomShowDate" type="checkbox" style="width:auto;margin:0" checked>書斎に日付を表示する</label></details>
  <details class="panel"><summary>タイマー設定</summary>
   <div class="settings">
    <label>集中時間（分）<input id="focusDuration" type="number" min="1" max="120" value="25"></label>
@@ -190,6 +191,7 @@
   <p class="muted" style="margin:14px 0 0">テーマカラーを変えると、アクセントだけでなく背景・カード・境界線・文字色もまとめて切り替わるよ。<br>マークはアプリ画面内の表示だよ。iPhoneホーム画面のアイコンはPWAの仕様上、この画面からは切り替えられないよ。</p>
  </details>
  <details class="panel"><summary>目標設定</summary><div class="settings"><label>1日の目標（分）<input id="dailyGoal" type="number" min="0" max="1440" value="60"></label><label>1週間の目標（分）<input id="weeklyGoal" type="number" min="0" max="10080" value="300"></label></div><button class="secondary wide" id="saveGoals">目標を保存</button></details>
+<details class="panel"><summary>自動バックアップ</summary><p class="muted">学習記録を変更するたびに、この端末内へ最新とひとつ前の2世代を自動保存するよ。端末間同期やクラウド保存ではないので、機種変更前にはJSONを書き出してね。</p><p class="muted" id="autoBackupStatus">自動バックアップを確認中…</p><div class="settings"><button class="secondary wide" id="restoreLatestAutoBackup" type="button">最新の自動バックアップから復元</button><button class="secondary wide" id="restorePreviousAutoBackup" type="button">ひとつ前の自動バックアップから復元</button></div></details>
 <details class="panel"><summary>データ管理</summary><p class="muted">学習記録はこの端末のブラウザ内に保存されるよ。バックアップを保存しておけば、機種変更時などに手動で引き継げるよ。</p><button class="secondary wide" id="exportData">学習データを書き出す（JSON）</button><label class="import-label">バックアップを読み込む<input id="importData" type="file" accept="application/json,.json" style="display:none"></label><button class="secondary wide" id="clear">今日の記録をリセット</button></details>
 <details class="panel" id="recoveryPanel"><summary>復旧用データの確認・復元</summary>
  <p class="muted">移行前や読み込み前に端末内へ保護したデータを確認できるよ。復元できるものは、現在の学習記録を置き換える前に確認を表示するよ。破損した元データは削除せず、そのまま書き出せるよ。</p>

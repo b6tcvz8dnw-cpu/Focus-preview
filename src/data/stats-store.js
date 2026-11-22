@@ -72,11 +72,24 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
     return storage.setJSON("focus-stats", serialize(next));
   }
 
+  function writeAutoBackup(next = state) {
+    const previous = storage.getJSON("focus-auto-backup", null);
+    if (previous && previous.stats) storage.setJSON("focus-auto-backup-previous", previous);
+    return storage.setJSON("focus-auto-backup", { savedAt: Date.now(), stats: serialize(next) });
+  }
+
+  function createAutoBackup({ onlyIfMissing = false } = {}) {
+    if (writeBlocked) return false;
+    if (onlyIfMissing && storage.getJSON("focus-auto-backup", null)) return false;
+    return writeAutoBackup(state);
+  }
+
   function commit(next, { save = true } = {}) {
     const candidate = buildState(next);
     // Persist the candidate before publishing it. A failed write must not
     // leave the in-memory view ahead of the durable local record.
     if (save && !persist(candidate)) return false;
+    if (save) writeAutoBackup(candidate);
     state = candidate;
     emit();
     return true;
@@ -176,6 +189,7 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
       return { ok: false, stage: "stats" };
     }
     writeBlocked = false;
+    writeAutoBackup(next);
     state = next;
     emit();
     return { ok: true, stage: "complete" };
@@ -185,6 +199,7 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
     getState: snapshot,
     isWriteBlocked: () => writeBlocked,
     load,
+    createAutoBackup,
     save: persist,
     addSession,
     updateRecord,
