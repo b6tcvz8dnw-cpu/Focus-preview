@@ -1431,6 +1431,34 @@ test("study stats store migrates legacy data and protects the original snapshot"
   assert.equal(h.storage.getJSON("focus-stats").schemaVersion, CURRENT_DATA_SCHEMA_VERSION);
 });
 
+test("stats migration refuses to overwrite data when an existing recovery snapshot is stale", () => {
+  const legacyRaw = JSON.stringify({ completed: 4, minutes: 100, records: [] });
+  const staleMigrationBackup = JSON.stringify({ completed: 1, minutes: 25, records: [] });
+  const migration = createStatsHarness({
+    "focus-stats": JSON.parse(legacyRaw),
+    "focus-pre-migration-backup": staleMigrationBackup
+  });
+  const migrated = migration.store.load();
+  assert.equal(migrated.writeBlocked, true);
+  assert.equal(migration.storage.getText("focus-stats"), legacyRaw);
+  assert.equal(migration.storage.getText("focus-pre-migration-backup"), staleMigrationBackup);
+  assert.equal(migration.store.addSession({
+    id: "blocked-migration", timestamp: 1795219200000, date: "2026-11-21", minutes: 25
+  }), false);
+
+  const corruptRaw = "{not valid json";
+  const staleCorruptBackup = "{an older corrupt snapshot";
+  const corrupt = createStatsHarness({
+    "focus-stats": corruptRaw,
+    "focus-corrupt-stats-backup": staleCorruptBackup
+  });
+  const loadedCorrupt = corrupt.store.load();
+  assert.equal(loadedCorrupt.writeBlocked, true);
+  assert.equal(corrupt.storage.getText("focus-stats"), corruptRaw);
+  assert.equal(corrupt.storage.getText("focus-corrupt-stats-backup"), staleCorruptBackup);
+  assert.equal(corrupt.store.setGoals(90, 400), false);
+});
+
 test("study stats store adds sessions and keeps aggregate totals consistent after reload", () => {
   const h = createStatsHarness();
   h.store.load();
