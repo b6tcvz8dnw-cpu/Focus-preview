@@ -25,7 +25,9 @@ jobs:
         with:
           node-version: 22
       - name: Install build tooling
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
+      - name: Audit production dependency tree
+        run: npm audit --audit-level=high
       - name: Run integrity tests
         run: npm test
       - name: Build production PWA
