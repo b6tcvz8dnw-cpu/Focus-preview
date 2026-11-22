@@ -2103,3 +2103,14 @@ test("large timer mode has a landscape layout and requests orientation lock when
   assert.match(styles, /env\(safe-area-inset-left\)/);
   assert.match(styles, /env\(safe-area-inset-right\)/);
 });
+
+
+test("landscape large timer scales clock text to the circular timer container", async () => {
+  const styles = await read("../src/styles/foundation.css");
+  assert.match(styles, /container-type:inline-size/);
+  assert.match(styles, /font-size:clamp\(34px,27cqw,86px\)/);
+  assert.match(styles, /width:min\(44vh,36vw,280px\)/);
+  assert.match(styles, /white-space:nowrap/);
+  assert.match(styles, /max-width:100%/);
+  assert.match(styles, /line-height:1/);
+});
