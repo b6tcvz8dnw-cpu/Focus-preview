@@ -30,8 +30,13 @@ jobs:
         run: npm audit --audit-level=high
       - name: Run integrity tests
         run: npm test
-      - name: Build production PWA
-        run: npm run build
+      - name: Verify reproducible production build
+        run: |
+          npm run build
+          find dist -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/focus-build-first.sha256
+          npm run build
+          find dist -type f -print0 | sort -z | xargs -0 sha256sum > /tmp/focus-build-second.sha256
+          diff -u /tmp/focus-build-first.sha256 /tmp/focus-build-second.sha256
 
       - name: Upload production build for review
         uses: actions/upload-artifact@v4
