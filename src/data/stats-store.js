@@ -19,12 +19,6 @@ function buildState(raw) {
   };
 }
 
-function protectRawSnapshot(key, rawText) {
-  const existing = storage.getText(key, null);
-  if (existing !== null) return existing === rawText;
-  return storage.setText(key, rawText);
-}
-
 function cloneState(state) {
   return {
     ...state,
@@ -43,6 +37,12 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
 
   let state = buildState(DEFAULT_STATS);
   let writeBlocked = false;
+
+  function protectRawSnapshot(key, rawText) {
+    const existing = storage.getText(key, null);
+    if (existing !== null) return existing === rawText;
+    return storage.setText(key, rawText);
+  }
 
   function snapshot() {
     return cloneState(state);
