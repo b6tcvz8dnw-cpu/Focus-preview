@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v24"));
+  assert.ok(sw.includes("focus-preview-pwa-v25"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v24");
+  assert.equal(cacheName, "focus-preview-pwa-v25");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./icons/icon-planet.png", "./icons/icon-hourglass.png", "./icons/icon-window.png", "./icons/icon-comet.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v24';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v25';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -1996,7 +1996,7 @@ function makeAppearanceFixture(saved = {}, options = {}) {
   return { root, storage, values, themes, marks, homeIcons, css, brand, meta, appleTouchIcon, favicon };
 }
 
-test("appearance controller restores theme, in-app mark, and home icon without rewriting preferences", () => {
+test("appearance controller restores theme and in-app mark without rewriting preferences", () => {
   const fixture = makeAppearanceFixture({
     "focus-appearance": JSON.stringify({ theme: "blue", mark: "leaf" }),
     "focus-mark": "star"
@@ -2006,8 +2006,6 @@ test("appearance controller restores theme, in-app mark, and home icon without r
   assert.equal(fixture.css.get("--bg"), "#101923");
   assert.equal(fixture.meta.attributes.content, "#101923");
   assert.equal(fixture.brand.textContent, "✦");
-  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-planet.png");
-  assert.equal(fixture.favicon.attributes.href, "./icons/icon-planet.png");
   assert.equal(fixture.themes.find(button => button.dataset.theme === "blue").selected, true);
   assert.equal(fixture.marks.find(button => button.dataset.mark === "star").attributes["aria-pressed"], "true");
   assert.equal(fixture.values.get("focus-appearance"), JSON.stringify({ theme: "blue", mark: "leaf" }));
