@@ -18,9 +18,20 @@ async function collectFiles(directory) {
 const dist = "dist";
 const allFiles = await collectFiles(join(dist, "assets"));
 const precacheAssets = allFiles
-  .filter((path) => true)
   .map((path) => "./" + relative(dist, path).split(sep).join("/"))
   .sort();
+if (new Set(precacheAssets).size !== precacheAssets.length) {
+  throw new Error("Generated PWA asset list contains duplicate paths.");
+}
+
+const staticPwaAssets = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png"
+];
 
 const swPath = join(dist, "sw.js");
 const sw = await readFile(swPath, "utf8");
@@ -44,14 +55,20 @@ if (!/rel=["']apple-touch-icon["'] href=["']\.\/[^"']+["']/.test(html)) {
 if (/\b(?:src|href)=["']\/(?:manifest|icon)/.test(html)) {
   throw new Error("Built PWA contains a domain-root asset URL that would break under /Focus/.");
 }
-for (const file of ["manifest.webmanifest", "sw.js", "icon.svg", "icon-192.png", "icon-512.png"]) {
-  await readFile(join(dist, file));
+for (const asset of staticPwaAssets.slice(1)) {
+  await readFile(join(dist, asset.slice(2)));
 }
+await readFile(join(dist, "sw.js"));
 const manifest = JSON.parse(await readFile(join(dist, "manifest.webmanifest"), "utf8"));
 if (manifest.start_url !== "./" || manifest.scope !== "./") {
   throw new Error("PWA manifest must keep relative start_url and scope.");
 }
+for (const asset of staticPwaAssets) {
+  if (!builtSw.includes(`'${asset}'`)) {
+    throw new Error(`Built Service Worker is missing static PWA asset ${asset}`);
+  }
+}
 for (const asset of precacheAssets) {
-  if (!builtSw.includes(asset)) throw new Error(`Built Service Worker is missing ${asset}`);
+  if (!builtSw.includes(asset)) throw new Error(`Built Service Worker is missing generated asset ${asset}`);
 }
 console.log(`FOCUS build verified: ${precacheAssets.length} generated assets are precached.`);
