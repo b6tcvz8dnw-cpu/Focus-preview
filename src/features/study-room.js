@@ -18,6 +18,8 @@ export function mountStudyRoom({ root = document, updateSky = () => {}, storage 
   let roomWeather=null,roomWeatherLoading=false,roomWeatherAttempted=false,roomWeatherFetchedAt=0,destroyed=false,weatherRequest=null,weatherTimeout=null;
   let clockFormat=storage?.getText('focus-room-clock-format','24')==='12'?'12':'24';
   let showDate=storage?.getText('focus-room-show-date','true')!=='false';
+  let clockFormat=storage?.getText('focus-room-clock-format','24')==='12'?'12':'24';
+  let showDate=storage?.getText('focus-room-show-date','true')!=='false';
   const weatherLabels=code=>{
     if(code===0)return ['晴れ','☀'];if(code===1)return ['おおむね晴れ','🌤'];if(code===2)return ['晴れ時々くもり','⛅'];if(code===3)return ['くもり','☁'];
     if(code===45||code===48)return ['霧','🌫'];if([51,53,55,56,57].includes(code))return ['霧雨','🌦'];
@@ -90,6 +92,8 @@ export function mountStudyRoom({ root = document, updateSky = () => {}, storage 
     $('studyRoomMessage').textContent=season.message+' '+time.message;
     if(roomWeather)applyWeather();
   }
+  function setClockFormat(value){if(value!=='12'&&value!=='24')return false;if(!storage?.setText('focus-room-clock-format',value))return false;clockFormat=value;update();return true;}
+  function setShowDate(value){const next=!!value;if(!storage?.setText('focus-room-show-date',String(next)))return false;showDate=next;update();return true;}
   function setClockFormat(value){if(value!=='12'&&value!=='24')return false;if(!storage?.setText('focus-room-clock-format',value))return false;clockFormat=value;update();return true;}
   function setShowDate(value){const next=!!value;if(!storage?.setText('focus-room-show-date',String(next)))return false;showDate=next;update();return true;}
   const handleWeatherClick=()=>{roomWeatherAttempted=false;loadWeather(true);};
