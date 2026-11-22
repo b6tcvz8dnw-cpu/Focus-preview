@@ -48,7 +48,9 @@ function normalizeRecords(value) {
       timestamp,
       date,
       minutes,
-      note: typeof raw.note === "string" ? raw.note.slice(0, 2000) : ""
+      note: typeof raw.note === "string" ? raw.note.slice(0, 2000) : "",
+      ...(typeof raw.subject === "string" && raw.subject.trim() ? { subject: raw.subject.trim().slice(0, 40) } : {}),
+      ...(typeof raw.intention === "string" && raw.intention.trim() ? { intention: raw.intention.trim().slice(0, 120) } : {})
     });
   });
   return result;

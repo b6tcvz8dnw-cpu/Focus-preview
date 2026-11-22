@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v18"));
+  assert.ok(sw.includes("focus-preview-pwa-v19"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v18");
+  assert.equal(cacheName, "focus-preview-pwa-v19");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v18';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v19';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -2174,4 +2174,35 @@ test("ambient sound mixer exposes independent persistent controls for every laye
   }
   assert.ok(controller.includes("function setLayerVolume(kind, volume)"));
   assert.ok(controller.includes("getLayerVolume"));
+});
+
+
+test("session records preserve optional subject and intention metadata", () => {
+  const normalized = normalizeStatsData({
+    records: [{ id: "s1", timestamp: 1795219200000, minutes: 25, subject: "数学", intention: "問題集を一問解く" }]
+  });
+  assert.equal(normalized.records[0].subject, "数学");
+  assert.equal(normalized.records[0].intention, "問題集を一問解く");
+  const legacy = normalizeStatsData({
+    records: [{ id: "s2", timestamp: 1795219200000, minutes: 25 }]
+  });
+  assert.equal("subject" in legacy.records[0], false);
+  assert.equal("intention" in legacy.records[0], false);
+});
+
+test("history filters search notes, intentions, and subjects with date and subject constraints", () => {
+  const h = createViewHarness();
+  const now = new Date(2026, 10, 21, 12);
+  h.views.renderHistory({
+    now, subject: "数学", period: "7",
+    records: [
+      { id: "new-math", timestamp: new Date(2026, 10, 20).getTime(), minutes: 25, subject: "数学", intention: "関数を復習" },
+      { id: "old-math", timestamp: new Date(2026, 10, 1).getTime(), minutes: 20, subject: "数学" },
+      { id: "new-english", timestamp: new Date(2026, 10, 20).getTime(), minutes: 30, subject: "英語", note: "長文" }
+    ]
+  });
+  const html = h.elements.get("historyList").innerHTML;
+  assert.match(html, /new-math/);
+  assert.match(html, /関数を復習/);
+  assert.doesNotMatch(html, /old-math|new-english/);
 });
