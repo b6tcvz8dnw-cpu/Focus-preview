@@ -2258,3 +2258,18 @@ test("automatic backup recovery controls are present and protect current data be
   assert.ok(main.includes("focus-pre-auto-restore"));
   assert.ok(store.includes("focus-auto-backup-previous"));
 });
+
+
+test("compact timer is outside page containers and updates on Settings navigation", async () => {
+  const html = await read("../index.html");
+  const script = await read("../src/main.js");
+  assert.match(html, /<\/div>\s*<div class="mini-timer" id="miniTimer"/);
+  assert.ok(html.indexOf('id="miniTimer"') < html.indexOf('id="overviewPage"'));
+  assert.match(script, /id!==b\.dataset\.page\)\);document\.querySelectorAll\('\.tab\[data-page\]'\)\.forEach\(t=>t\.removeAttribute\('aria-current'\)\);updateMiniTimer\(\);return/);
+});
+
+test("landscape immersive timer hides optional session metadata fields to protect the grid layout", async () => {
+  const styles = await read("../src/styles/foundation.css");
+  assert.match(styles, /body\.timer-large-mode #timerPanel \.session-subject-control/);
+  assert.match(styles, /body\.timer-large-mode #timerPanel \.session-intention-control/);
+});
