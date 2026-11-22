@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v22"));
+  assert.ok(sw.includes("focus-preview-pwa-v23"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,9 +287,9 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v22");
+  assert.equal(cacheName, "focus-preview-pwa-v23");
   for (const asset of [
-    "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./icons/icon-planet.svg", "./icons/icon-hourglass.svg", "./icons/icon-window.svg", "./icons/icon-comet.svg"
+    "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./icons/icon-planet.png", "./icons/icon-hourglass.png", "./icons/icon-window.png", "./icons/icon-comet.png"
   ]) {
     assert.ok(sw.includes(asset), "service worker should cache " + asset);
   }
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v22';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v23';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -681,8 +681,8 @@ test("Vite keeps the GitHub Pages project path relative", async () => {
   assert.match(config, /publicDir:\s*["']public["']/);
   const html = await read("../index.html");
   assert.ok(html.includes('href="./manifest.webmanifest"'));
-  assert.ok(html.includes('href="./icon.svg"'));
-  assert.ok(html.includes('href="./icons/icon-planet.svg"'));
+  assert.ok(html.includes('href="./icons/icon-planet.png"'));
+  assert.ok(html.includes('href="./icons/icon-planet.png"'));
 });
 
 test("production build injects generated bundles into the PWA precache", async () => {
@@ -2006,8 +2006,8 @@ test("appearance controller restores theme, in-app mark, and home icon without r
   assert.equal(fixture.css.get("--bg"), "#101923");
   assert.equal(fixture.meta.attributes.content, "#101923");
   assert.equal(fixture.brand.textContent, "✦");
-  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-planet.svg");
-  assert.equal(fixture.favicon.attributes.href, "./icons/icon-planet.svg");
+  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-planet.png");
+  assert.equal(fixture.favicon.attributes.href, "./icons/icon-planet.png");
   assert.equal(fixture.themes.find(button => button.dataset.theme === "blue").selected, true);
   assert.equal(fixture.marks.find(button => button.dataset.mark === "star").attributes["aria-pressed"], "true");
   assert.equal(fixture.values.get("focus-appearance"), JSON.stringify({ theme: "blue", mark: "leaf" }));
@@ -2028,7 +2028,7 @@ test("appearance controller applies and persists theme and mark choices", () => 
   fixture.homeIcons.find(button => button.dataset.homeIcon === "comet").click();
   assert.equal(controller.getState().homeIcon, "comet");
   assert.equal(fixture.values.get("focus-home-icon"), "comet");
-  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-comet.svg");
+  assert.equal(fixture.appleTouchIcon.attributes.href, "./icons/icon-comet.png");
   assert.equal(fixture.homeIcons.find(button => button.dataset.homeIcon === "comet").attributes["aria-pressed"], "true");
 });
 
