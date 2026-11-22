@@ -1,6 +1,11 @@
 name: Generate dependency lockfile
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/generate-lockfile.yml"
   workflow_dispatch:
 
 permissions:
@@ -33,11 +38,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c chore/dependency-lockfile
+          git switch -C chore/dependency-lockfile
           git add package-lock.json
           git diff --cached --quiet && {
             echo "No lockfile changes to publish."
             exit 0
           }
           git commit -m "build: add verified npm lockfile"
-          git push origin chore/dependency-lockfile
+          git push --force-with-lease origin chore/dependency-lockfile
