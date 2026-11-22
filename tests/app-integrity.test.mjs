@@ -190,6 +190,35 @@ test("HTML loads the external application module and its source parses", async (
   assert.ok(!script.includes("localStorage."), "app should use the storage adapter");
 });
 
+test("timer controller tracks actual focus time across pause and resume", () => {
+  let clock = 100000;
+  const values = new Map();
+  const store = {
+    setJSON: (key, value) => { values.set(key, structuredClone(value)); return true; },
+    getJSON: (key, fallback) => values.has(key) ? structuredClone(values.get(key)) : fallback
+  };
+  let completed = null;
+  const controller = createTimerController({
+    durations: { focus: 2, short: 1, long: 2 },
+    store,
+    now: () => clock,
+    schedule: () => 1,
+    cancel: () => {},
+    onFocusComplete: (result) => { completed = result; }
+  });
+  controller.start();
+  clock += 30000;
+  controller.pause();
+  assert.equal(controller.getState().focusElapsedSeconds, 30);
+  clock += 15000;
+  controller.start();
+  clock += 90000;
+  controller.tick();
+  assert.equal(completed.actualSeconds, 120);
+  assert.equal(completed.plannedSeconds, 120);
+  assert.equal(controller.getState().mode, "short");
+});
+
 test("timer lifecycle is owned by its feature module and Study Room remains separated", async () => {
   const script = await read("../src/main.js");
   const controller = await read("../src/features/timer-controller.js");
