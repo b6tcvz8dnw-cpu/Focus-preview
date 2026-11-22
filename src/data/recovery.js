@@ -4,7 +4,8 @@ const SOURCES = [
   { key: "focus-preimport-backup", label: "インポート直前のバックアップ", kind: "backup" },
   { key: "focus-pre-migration-backup", label: "データ形式の移行前バックアップ", kind: "stats" },
   { key: "focus-corrupt-stats-backup", label: "読み込みに失敗した元データ", kind: "raw" },
-  { key: "focus-pre-recovery-raw-stats", label: "復元操作の直前に保護したデータ", kind: "stats" }
+  { key: "focus-pre-recovery-raw-stats", label: "復元操作の直前に保護したデータ", kind: "stats" },
+  { key: "focus-pre-auto-restore", label: "自動バックアップ復元前のデータ", kind: "stats" }
 ];
 
 /**

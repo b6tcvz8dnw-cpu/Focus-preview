@@ -2258,3 +2258,33 @@ test("automatic backup recovery controls are present and protect current data be
   assert.ok(main.includes("focus-pre-auto-restore"));
   assert.ok(store.includes("focus-auto-backup-previous"));
 });
+
+
+test("compact timer is outside page containers and updates on Settings navigation", async () => {
+  const html = await read("../index.html");
+  const script = await read("../src/main.js");
+  assert.match(html, /<\/div>\s*<div class="mini-timer" id="miniTimer"/);
+  assert.ok(html.indexOf('id="miniTimer"') < html.indexOf('id="overviewPage"'));
+  assert.ok(script.includes("updateMiniTimer();return}setStudyRoomMode"));
+});
+
+test("landscape immersive timer hides optional session metadata fields to protect the grid layout", async () => {
+  const styles = await read("../src/styles/foundation.css");
+  assert.match(styles, /body\.timer-large-mode #timerPanel \.session-subject-control/);
+  assert.match(styles, /body\.timer-large-mode #timerPanel \.session-intention-control/);
+});
+
+
+test("recovery inspection exposes the snapshot protected before automatic-backup restore", () => {
+  const payload = JSON.stringify({
+    schemaVersion: CURRENT_DATA_SCHEMA_VERSION,
+    records: [{ id: "before-auto-restore", timestamp: 1795219200000, date: "2026-11-21", minutes: 25, note: "" }]
+  });
+  const store = {
+    getText: (key, fallback = null) => key === "focus-pre-auto-restore" ? payload : fallback
+  };
+  const item = inspectRecoverySnapshots(store).find(entry => entry.key === "focus-pre-auto-restore");
+  assert.equal(item.available, true);
+  assert.equal(item.restorable, true);
+  assert.equal(item.stats.records[0].id, "before-auto-restore");
+});
