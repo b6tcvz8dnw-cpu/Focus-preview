@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v14"));
+  assert.ok(sw.includes("focus-preview-pwa-v15"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -258,7 +258,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v14");
+  assert.equal(cacheName, "focus-preview-pwa-v15");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -322,7 +322,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v14';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v15';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -1989,4 +1989,50 @@ test("appearance controller removes only its own button listeners on destroy", (
   controller.destroy();
   assert.equal(fixture.themes[0].listenerCount, 0);
   assert.equal(fixture.marks[0].listenerCount, 0);
+});
+
+
+test("navigation falls back to the cached app shell on HTTP errors and network failures", async () => {
+  const sw = await read("../public/sw.js");
+  const listeners = {};
+  const shell = { ok: true, status: 200, body: "cached-app-shell" };
+  const caches = {
+    async match(request) {
+      return request === "./index.html" ? shell : null;
+    },
+    async open() { return { async put() {}, async addAll() {} }; },
+    async keys() { return []; },
+    async delete() { return true; }
+  };
+  const context = {
+    self: {
+      location: { origin: "https://focus-preview.test" },
+      addEventListener(type, listener) { listeners[type] = listener; },
+      clients: { claim: () => Promise.resolve() }
+    },
+    caches,
+    URL,
+    Promise,
+    fetch: async () => ({ ok: false, status: 503, body: "service-unavailable" })
+  };
+  vm.runInNewContext(sw, context, { filename: "public/sw.js" });
+
+  const request = { method: "GET", mode: "navigate", url: "https://focus-preview.test/Focus-preview/" };
+  const runNavigation = async () => {
+    let responsePromise;
+    const waits = [];
+    listeners.fetch({
+      request,
+      respondWith(promise) { responsePromise = promise; },
+      waitUntil(promise) { waits.push(promise); }
+    });
+    return responsePromise;
+  };
+
+  const httpErrorFallback = await runNavigation();
+  assert.equal(httpErrorFallback.body, "cached-app-shell");
+
+  context.fetch = async () => { throw new Error("offline"); };
+  const networkErrorFallback = await runNavigation();
+  assert.equal(networkErrorFallback.body, "cached-app-shell");
 });
