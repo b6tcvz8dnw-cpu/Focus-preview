@@ -19,6 +19,12 @@ function buildState(raw) {
   };
 }
 
+function protectRawSnapshot(key, rawText) {
+  const existing = storage.getText(key, null);
+  if (existing !== null) return existing === rawText;
+  return storage.setText(key, rawText);
+}
+
 function cloneState(state) {
   return {
     ...state,
@@ -91,8 +97,7 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
             throw new Error("Invalid stats payload");
           }
         } catch {
-          const exists = storage.getText("focus-corrupt-stats-backup", null) !== null;
-          persistNormalized = exists || storage.setText("focus-corrupt-stats-backup", rawText);
+          persistNormalized = protectRawSnapshot("focus-corrupt-stats-backup", rawText);
           raw = {};
           message = persistNormalized
             ? "保存データの形式が壊れていたため、元データを端末内に退避して初期化したよ。"
@@ -103,8 +108,7 @@ export function createStudyStatsStore({ storage, onChange = () => {} } = {}) {
           persistNormalized = false;
           message = "この保存データは新しいFOCUSで作られているため、上書きせずに保護しているよ。";
         } else if (rawText !== null && raw.schemaVersion !== CURRENT_DATA_SCHEMA_VERSION && persistNormalized) {
-          const exists = storage.getText("focus-pre-migration-backup", null) !== null;
-          persistNormalized = exists || storage.setText("focus-pre-migration-backup", rawText);
+          persistNormalized = protectRawSnapshot("focus-pre-migration-backup", rawText);
           if (!persistNormalized) {
             message = "旧データの退避に失敗したため、上書き保存を停止しているよ。";
           }
