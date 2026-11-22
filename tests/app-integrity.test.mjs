@@ -1117,8 +1117,8 @@ test("stats replacement keeps the pre-import backup and old stats when the new w
 test("document head uses relative PWA asset paths for GitHub Pages subpaths", async () => {
   const html = await read("../index.html");
   assert.match(html, /<link rel="manifest" href="\.\/manifest\.webmanifest"/);
-  assert.match(html, /<link id="appFavicon" rel="icon" href="\\.\\/icons\\/icon-planet\\.png"/);
-  assert.match(html, /<link id="appleTouchIcon" rel="apple-touch-icon" href="\\.\\/icons\\/icon-planet\\.png"/);
+  assert.match(html, /<link id="appFavicon" rel="icon" href="\.\/icons\/icon-planet\.png"/);
+  assert.match(html, /<link id="appleTouchIcon" rel="apple-touch-icon" href="\.\/icons\/icon-planet\.png"/);
   assert.doesNotMatch(html, /(?:href|src)="\/(?:manifest\.webmanifest|icon\.svg|icon-192\.png|icons\/)/);
 });
 
