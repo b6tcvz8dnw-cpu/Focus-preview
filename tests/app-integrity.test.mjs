@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v19"));
+  assert.ok(sw.includes("focus-preview-pwa-v20"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -287,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v19");
+  assert.equal(cacheName, "focus-preview-pwa-v20");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -351,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v19';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v20';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -2205,4 +2205,17 @@ test("history filters search notes, intentions, and subjects with date and subje
   assert.match(html, /new-math/);
   assert.match(html, /関数を復習/);
   assert.doesNotMatch(html, /old-math|new-english/);
+});
+
+
+test("compact timer remains available on other pages while a session is running or paused", async () => {
+  const html = await read("../index.html");
+  const script = await read("../src/main.js");
+  assert.ok(html.includes('id="miniTimer"'));
+  assert.ok(html.includes('id="miniTimerClock"'));
+  assert.ok(html.includes('id="miniTimerToggle"'));
+  assert.ok(script.includes("function updateMiniTimer()"));
+  assert.ok(script.includes("currentPage!=='timerPage'&&(running||remaining!==total)"));
+  assert.ok(script.includes("updateMiniTimer()"));
+  assert.ok(script.includes("timerController.pause()"));
 });
