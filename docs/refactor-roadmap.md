@@ -323,6 +323,9 @@ Audit workstreams:
 Initial findings:
 - The repository currently has no `package-lock.json`; CI uses `npm install`. Although Vite itself is pinned in `package.json`, transitive dependency resolution is not fully locked. This is a reproducibility gap to resolve before promotion.
 - A local attempt to generate the lockfile could not reach the package registry in this environment. Do not hand-author a lockfile; generate and verify it in a network-enabled, trusted build environment.
+- Backup import now enforces a 10 MiB UTF-8 payload ceiling both before reading a selected file and before parsing direct text input. Oversized inputs are rejected before settings, records, or recovery snapshots are changed; the file picker is reset on rejection.
+- Added regression tests for oversized direct text and oversized selected files. GitHub Actions passed all 122 tests and the production PWA build; the matching Preview Pages deployment completed successfully on commit `495472c292cc54cc93a782704a8a11cda8add96b`.
+- Compatibility review confirms the automated suite covers legacy unversioned stats migration, version-2 backup import, current version-3 round-trip, invalid settings/version rejection, and protection of future schema data. Manual iPhone validation remains separate.
 - Import and rendering code has existing schema normalization and escaping protections. Backup import now rejects files and direct text payloads above 10 MiB before parsing or mutating settings/records; the limit is deliberately generous for a personal study-history export and can be revisited if real backups approach it.
 - Phase 8 is in progress; the Preview deployment remains separate from production.
 
