@@ -1,4 +1,4 @@
-const CACHE='focus-preview-pwa-v14';
+const CACHE='focus-preview-pwa-v15';
 const CACHE_PREFIX='focus-preview-';
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png',...BUILD_ASSETS];
@@ -34,7 +34,9 @@ self.addEventListener('fetch',event=>{
   if(event.request.mode==='navigate' || event.request.url.endsWith('/index.html')){
     event.respondWith(
       fetch(event.request)
-        .then(response=>cacheSuccessfulResponse(event,event.request,response))
+        .then(response=>response.ok
+          ? cacheSuccessfulResponse(event,event.request,response)
+          : caches.match(event.request).then(hit=>hit||caches.match('./index.html').then(shell=>shell||response)))
         .catch(()=>caches.match(event.request).then(hit=>hit||caches.match('./index.html')))
     );
     return;
