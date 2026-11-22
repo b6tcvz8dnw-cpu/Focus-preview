@@ -94,7 +94,7 @@ export function createStudyViews({ root = document } = {}) {
     $("calendarGrid").innerHTML = cells.join("");
   }
 
-  function renderHistory({ records, query = "", reflectionOnly = false, subject = "", period = "all", now = new Date() }) {
+  function renderHistory({ records, query = "", reflectionOnly = false, period = "all", now = new Date() }) {
     const normalizedQuery = query.trim().toLowerCase();
     const days = Number(period);
     const cutoff = Number.isFinite(days) && days > 0
@@ -102,20 +102,18 @@ export function createStudyViews({ root = document } = {}) {
       : 0;
     const list = [...records].sort((a, b) => b.timestamp - a.timestamp)
       .filter(record => (!reflectionOnly || String(record.note || "").trim())
-        && (!subject || String(record.subject || "") === subject)
         && (!cutoff || Number(record.timestamp) >= cutoff)
-        && (!normalizedQuery || [record.note, record.intention, record.subject].some(value => String(value || "").toLowerCase().includes(normalizedQuery))))
+        && (!normalizedQuery || [record.note, record.intention].some(value => String(value || "").toLowerCase().includes(normalizedQuery))))
       .slice(0, 60);
     $("historyList").innerHTML = list.length
       ? list.map(record => '<div class="history-item"><div class="history-top"><span>' +
         new Date(record.timestamp).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) +
         "</span><b>" + record.minutes + "分</b></div>" +
-        (record.subject ? '<span class="history-subject">' + escapeHTML(record.subject) + "</span>" : "") +
         (record.intention ? "<small>開始前の意図：" + escapeHTML(record.intention) + "</small>" : "") +
         (record.note ? "<small>振り返り：" + escapeHTML(record.note) + "</small>" : "") +
         '<div class="history-actions"><button data-record-edit="' + escapeHTML(record.id) + '">分数を修正</button><button data-record-delete="' + escapeHTML(record.id) + '">削除</button></div></div>'
       ).join("")
-      : '<p class="muted">条件に合う記録がありません。科目や期間を変えてみてね。</p>';
+      : '<p class="muted">条件に合う記録がありません。検索語や期間を変えてみてね。</p>';
   }
 
   function renderAnalytics({ history, range, now = new Date() }) {
