@@ -2091,3 +2091,15 @@ test("build verifies static PWA shell assets are included in the Service Worker 
   assert.match(buildScript, /Built Service Worker is missing static PWA asset/);
   assert.match(buildScript, /Generated PWA asset list contains duplicate paths/);
 });
+
+
+test("large timer mode has a landscape layout and requests orientation lock when supported", async () => {
+  const script = await read("../src/main.js");
+  const styles = await read("../src/styles/foundation.css");
+  assert.match(script, /orientation\.lock\('landscape'\)/);
+  assert.match(script, /orientation\.unlock\(\)/);
+  assert.match(styles, /@media \(orientation:landscape\) and \(max-height:600px\)/);
+  assert.match(styles, /grid-template-areas:"modes modes" "timer controls" "hint hint"/);
+  assert.match(styles, /env\(safe-area-inset-left\)/);
+  assert.match(styles, /env\(safe-area-inset-right\)/);
+});
