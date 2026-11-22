@@ -354,3 +354,8 @@
 }
 
 .recovery-list{display:grid;gap:12px;margin-top:12px}.recovery-item{padding:12px;border:1px solid var(--border);border-radius:12px}.recovery-item strong{display:block}.recovery-item p{margin:6px 0 10px}.recovery-actions{display:flex;flex-wrap:wrap;gap:8px}.recovery-actions button{flex:1 1 140px}
+
+
+/* A gentle sign of continuity when returning to the Study Room */
+.study-room-return{margin-top:5px;color:rgba(255,244,223,.72);font-size:clamp(10px,1.15vw,13px);letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.25)}
+@media(max-width:520px){.study-room-return{max-width:45vw;line-height:1.35}}
