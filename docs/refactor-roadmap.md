@@ -334,3 +334,6 @@ Initial findings:
 - Navigation fallback audit found that the previous network-first route only used the cached app shell when fetch rejected. An HTTP 5xx response could still replace the app with a server error page even when a valid cached shell existed.
 - Updated Preview Service Worker to use the cached navigation response or cached `index.html` for both HTTP error responses and network failures; if no cached shell exists, the original HTTP error response is preserved. Cache namespace advanced to v15.
 - Added an executable Service Worker regression test for both HTTP 503 and offline network rejection. Production remains untouched.
+
+- Downloaded and inspected the deployed GitHub Pages artifact for the v15 build. All nine files were present; every local HTML asset reference resolved, all three generated Vite assets were included in the Service Worker precache, and all five static PWA shell resources were present.
+- Hardened the build verifier to reject duplicate generated asset paths and to require the app shell, manifest, and icons in the built Service Worker precache. This prevents a future edit from silently omitting static PWA resources while still passing the build.
