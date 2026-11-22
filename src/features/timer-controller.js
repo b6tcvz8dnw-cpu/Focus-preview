@@ -80,7 +80,7 @@ export function createTimerController({
       focusElapsedMs += Math.max(0, now() - focusStartedAt);
       focusStartedAt = 0;
     }
-    const completedFocusSeconds = Math.floor(focusElapsedMs / 1000);
+    const completedFocusSeconds = Math.floor(Math.min(total * 1000, focusElapsedMs) / 1000);
     stop();
     remaining = 0;
 
@@ -150,6 +150,8 @@ export function createTimerController({
     config = { ...config, ...nextDurations };
     stop();
     finished = false;
+    focusElapsedMs = 0;
+    focusStartedAt = 0;
     remaining = config[mode] * 60;
     total = remaining;
     persist();
