@@ -1,4 +1,4 @@
-const CACHE='focus-preview-pwa-v24';
+const CACHE='focus-preview-pwa-v25';
 const CACHE_PREFIX='focus-preview-';
 const BUILD_ASSETS = [];
 const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icons/icon-planet.svg','./icons/icon-hourglass.svg','./icons/icon-window.svg','./icons/icon-comet.svg','./icons/icon-planet.png','./icons/icon-hourglass.png','./icons/icon-window.png','./icons/icon-comet.png',...BUILD_ASSETS];
