@@ -155,7 +155,7 @@ test("hourglass CSS uses real rule separators and preview cache is versioned", a
   assert.ok(css.includes(".hourglass-grain{fill:var(--accent)"));
   assert.ok(css.includes(".hourglass-art.is-running .hourglass-grain{animation:sand-grain-fall"));
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("focus-preview-pwa-v15"));
+  assert.ok(sw.includes("focus-preview-pwa-v16"));
 });
 
 test("calendar and analytics panels are mounted in their matching tabs", async () => {
@@ -188,6 +188,35 @@ test("HTML loads the external application module and its source parses", async (
   assert.ok(script.includes("./core/timer.js"), "timer module should be imported");
   assert.ok(script.includes("./data/stats-store.js"), "statistics store should be imported");
   assert.ok(!script.includes("localStorage."), "app should use the storage adapter");
+});
+
+test("timer controller tracks actual focus time across pause and resume", () => {
+  let clock = 100000;
+  const values = new Map();
+  const store = {
+    setJSON: (key, value) => { values.set(key, structuredClone(value)); return true; },
+    getJSON: (key, fallback) => values.has(key) ? structuredClone(values.get(key)) : fallback
+  };
+  let completed = null;
+  const controller = createTimerController({
+    durations: { focus: 2, short: 1, long: 2 },
+    store,
+    now: () => clock,
+    schedule: () => 1,
+    cancel: () => {},
+    onFocusComplete: (result) => { completed = result; }
+  });
+  controller.start();
+  clock += 30000;
+  controller.pause();
+  assert.equal(controller.getState().focusElapsedSeconds, 30);
+  clock += 15000;
+  controller.start();
+  clock += 90000;
+  controller.tick();
+  assert.equal(completed.actualSeconds, 120);
+  assert.equal(completed.plannedSeconds, 120);
+  assert.equal(controller.getState().mode, "short");
 });
 
 test("timer lifecycle is owned by its feature module and Study Room remains separated", async () => {
@@ -258,7 +287,7 @@ test("Study Room animations pause while another page is selected", async () => {
 test("preview service worker caches only successful responses and waits for cache writes", async () => {
   const sw = await read("../public/sw.js");
   const cacheName = sw.match(/const CACHE='([^']+)'/)?.[1];
-  assert.equal(cacheName, "focus-preview-pwa-v15");
+  assert.equal(cacheName, "focus-preview-pwa-v16");
   for (const asset of [
     "./index.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"
   ]) {
@@ -322,7 +351,7 @@ test("Study Room sky progression preserves all existing thresholds", () => {
 
 test("preview Service Worker only manages preview-owned caches", async () => {
   const sw = await read("../public/sw.js");
-  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v15';"));
+  assert.ok(sw.includes("const CACHE='focus-preview-pwa-v16';"));
   assert.ok(sw.includes("const CACHE_PREFIX='focus-preview-';"));
   assert.ok(sw.includes("key.startsWith(CACHE_PREFIX) && key!==CACHE"));
 });
@@ -576,7 +605,7 @@ test("startup restores timer only after statistics and completion callbacks are 
   const restore = script.indexOf("timerController.restore()");
   const controller = script.indexOf("timerController=createTimerController(");
   assert.ok(controller >= 0 && statsLoad > controller && restore > statsLoad);
-  assert.ok(script.includes("onFocusComplete(){"), "focus completion callback must be registered before restore");
+  assert.ok(script.includes("onFocusComplete({actualSeconds="), "focus completion callback must be registered before restore");
   assert.ok(script.includes("if(appReady){"), "startup completion must defer UI-only effects");
   assert.ok(script.includes("appReady=true;"), "UI becomes ready after initial rendering");
   const timer = await read("../src/features/timer-controller.js");
@@ -615,8 +644,8 @@ test("focus completion callback is the only session-record creation path", async
   const script = await read("../src/main.js");
   const created = [...script.matchAll(/statsStore\.addSession\(record\)/g)];
   assert.equal(created.length, 1);
-  assert.ok(script.includes("onFocusComplete(){"));
-  assert.ok(script.includes("minutes:durations.focus"));
+  assert.ok(script.includes("onFocusComplete({actualSeconds="));
+  assert.ok(script.includes("minutes:Math.min(120,actualMinutes)"));
   assert.ok(script.includes("if(appReady){"));
 });
 
@@ -1313,7 +1342,7 @@ test("timer controller starts, pauses, and persists a deadline-based runtime", (
   h.controller.start();
   assert.deepEqual(h.controller.getState(), {
     durations: { focus: 1, short: 1, long: 2 }, mode: "focus",
-    remaining: 60, total: 60, running: true, deadline: 61000, finished: false
+    remaining: 60, total: 60, running: true, deadline: 61000, finished: false, focusElapsedSeconds: 0
   });
   h.advance(12500);
   h.controller.pause();

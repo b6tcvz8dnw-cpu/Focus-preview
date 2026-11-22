@@ -27,10 +27,13 @@ export function createTimerController({
   let deadline = 0;
   let interval = null;
   let finished = false;
+  let focusElapsedMs = 0;
+  let focusStartedAt = 0;
   let pageVisible = true;
 
   const snapshot = () => ({
-    durations: { ...config }, mode, remaining, total, running, deadline, finished
+    durations: { ...config }, mode, remaining, total, running, deadline, finished,
+    focusElapsedSeconds: Math.floor((focusElapsedMs + (running && mode === "focus" && focusStartedAt ? now() - focusStartedAt : 0)) / 1000)
   });
 
   function emit() {
@@ -40,7 +43,8 @@ export function createTimerController({
   function persist() {
     try {
       store?.setJSON("focus-timer-runtime", {
-        mode, remaining, deadline, running, finished, updatedAt: now()
+        mode, remaining, deadline, running, finished, focusElapsedMs,
+        focusStartedAt, updatedAt: now()
       });
     } catch {}
   }
@@ -60,7 +64,9 @@ export function createTimerController({
     if (remaining <= 0) remaining = config[mode] * 60;
     finished = false;
     running = true;
-    deadline = now() + remaining * 1000;
+    const startedAt = now();
+    deadline = startedAt + remaining * 1000;
+    if (mode === "focus" && !focusStartedAt) focusStartedAt = startedAt;
     if (interval !== null) cancel(interval);
     interval = null;
     scheduleTick();
@@ -70,11 +76,17 @@ export function createTimerController({
 
   function complete() {
     const endedMode = mode;
+    if (endedMode === "focus" && focusStartedAt) {
+      focusElapsedMs += Math.max(0, now() - focusStartedAt);
+      focusStartedAt = 0;
+    }
+    const completedFocusSeconds = Math.floor(Math.min(total * 1000, focusElapsedMs) / 1000);
     stop();
     remaining = 0;
 
     if (endedMode === "focus") {
-      onFocusComplete();
+      onFocusComplete({ actualSeconds: completedFocusSeconds, plannedSeconds: total });
+      focusElapsedMs = 0;
       mode = getNextBreakMode(getCompletedSessions(), getCycleLength());
       finished = false;
       remaining = config[mode] * 60;
@@ -98,7 +110,12 @@ export function createTimerController({
 
   function pause() {
     if (!running) return false;
-    remaining = getRemainingSeconds(deadline, now());
+    const pausedAt = now();
+    remaining = getRemainingSeconds(deadline, pausedAt);
+    if (mode === "focus" && focusStartedAt) {
+      focusElapsedMs += Math.max(0, pausedAt - focusStartedAt);
+      focusStartedAt = 0;
+    }
     stop();
     emit();
     return true;
@@ -107,6 +124,8 @@ export function createTimerController({
   function reset() {
     stop();
     finished = false;
+    focusElapsedMs = 0;
+    focusStartedAt = 0;
     remaining = config[mode] * 60;
     total = remaining;
     persist();
@@ -118,6 +137,8 @@ export function createTimerController({
     stop();
     mode = nextMode;
     finished = false;
+    focusElapsedMs = 0;
+    focusStartedAt = 0;
     remaining = config[mode] * 60;
     total = remaining;
     persist();
@@ -129,6 +150,8 @@ export function createTimerController({
     config = { ...config, ...nextDurations };
     stop();
     finished = false;
+    focusElapsedMs = 0;
+    focusStartedAt = 0;
     remaining = config[mode] * 60;
     total = remaining;
     persist();
@@ -153,11 +176,14 @@ export function createTimerController({
 
     mode = saved.mode;
     finished = !!saved.finished;
+    focusElapsedMs = Number.isFinite(Number(saved.focusElapsedMs)) ? Math.max(0, Number(saved.focusElapsedMs)) : 0;
+    focusStartedAt = Number.isFinite(Number(saved.focusStartedAt)) ? Math.max(0, Number(saved.focusStartedAt)) : 0;
     total = config[mode] * 60;
 
     if (saved.running && Number.isFinite(Number(saved.deadline)) && Number(saved.deadline) > 0) {
       running = true;
       deadline = Number(saved.deadline);
+      if (mode === "focus" && !focusStartedAt) focusStartedAt = now();
       remaining = getRemainingSeconds(deadline, now());
       if (remaining > 0) {
         scheduleTick();
@@ -168,6 +194,7 @@ export function createTimerController({
       }
     } else {
       running = false;
+      focusStartedAt = 0;
       const savedRemaining = Number(saved.remaining);
       remaining = Number.isFinite(savedRemaining)
         ? Math.max(0, Math.min(total, savedRemaining))
