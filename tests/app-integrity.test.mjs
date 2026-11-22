@@ -2036,3 +2036,11 @@ test("navigation falls back to the cached app shell on HTTP errors and network f
   const networkErrorFallback = await runNavigation();
   assert.equal(networkErrorFallback.body, "cached-app-shell");
 });
+
+
+test("build verifies static PWA shell assets are included in the Service Worker precache", async () => {
+  const buildScript = await read("../scripts/build.mjs");
+  assert.match(buildScript, /const staticPwaAssets = \[/);
+  assert.match(buildScript, /Built Service Worker is missing static PWA asset/);
+  assert.match(buildScript, /Generated PWA asset list contains duplicate paths/);
+});
