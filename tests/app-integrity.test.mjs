@@ -644,7 +644,7 @@ test("focus completion callback is the only session-record creation path", async
   const script = await read("../src/main.js");
   const created = [...script.matchAll(/statsStore\.addSession\(record\)/g)];
   assert.equal(created.length, 1);
-  assert.ok(script.includes("onFocusComplete(){"));
+  assert.ok(script.includes("onFocusComplete({actualSeconds="));
   assert.ok(script.includes("minutes:Math.min(120,actualMinutes)"));
   assert.ok(script.includes("if(appReady){"));
 });
