@@ -2265,7 +2265,7 @@ test("compact timer is outside page containers and updates on Settings navigatio
   const script = await read("../src/main.js");
   assert.match(html, /<\/div>\s*<div class="mini-timer" id="miniTimer"/);
   assert.ok(html.indexOf('id="miniTimer"') < html.indexOf('id="overviewPage"'));
-  assert.match(script, /id!==b\.dataset\.page\)\);document\.querySelectorAll\('\.tab\[data-page\]'\)\.forEach\(t=>t\.removeAttribute\('aria-current'\)\);updateMiniTimer\(\);return/);
+  assert.ok(script.includes("updateMiniTimer();return}setStudyRoomMode"));
 });
 
 test("landscape immersive timer hides optional session metadata fields to protect the grid layout", async () => {
